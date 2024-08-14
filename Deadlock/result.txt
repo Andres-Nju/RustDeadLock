@@ -1,0 +1,154 @@
+Show MIR
+DefId(0:7 ~ double_lock_1[39a8]::main)
+_0:  @ () 
+_1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_2:  @ std::sync::Mutex<i32> 
+_3:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_4:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_5:  @ std::thread::JoinHandle<()> 
+_6:  @ Closure(DefId(0:8 ~ double_lock_1[39a8]::main::{closure#0}), [i32, Binder(extern "RustCall" fn(()), []), (std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>,)]) 
+_7:  @ () 
+_8:  @ std::result::Result<(), std::boxed::Box<dyn [Binder(Trait(std::any::Any), []), Binder(AutoTrait(DefId(2:32445 ~ core[0c3f]::marker::Send)), [])] + ReErased, std::alloc::Global>> 
+
+bb 0 {
+CleanUp: false
+    _2 = std::sync::Mutex::<i32>::new(const 0_i32) -> [return: bb1, unwind continue] @ Call: FnDid: 6372
+}
+bb 1 {
+CleanUp: false
+    _1 = std::sync::Arc::<std::sync::Mutex<i32>>::new(move _2) -> [return: bb2, unwind continue] @ Call: FnDid: 6025
+}
+bb 2 {
+CleanUp: false
+    Assign((_4, &_1)) @ _4=&_1 @ Ref
+    _3 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(_4) -> [return: bb3, unwind: bb8] @ Call: FnDid: 2441
+}
+bb 3 {
+CleanUp: false
+    Assign((_6, {closure@test/double_lock_1.rs:6:32: 6:39} { mutex_clone: move _3 })) @ _6={closure@test/double_lock_1.rs:6:32: 6:39} { mutex_clone: move _3 } @ Aggregate
+    _5 = std::thread::spawn::<{closure@test/double_lock_1.rs:6:32: 6:39}, ()>(move _6) -> [return: bb4, unwind: bb8] @ Call: FnDid: 495
+}
+bb 4 {
+CleanUp: false
+    _8 = std::thread::JoinHandle::<()>::join(move _5) -> [return: bb5, unwind: bb8] @ Call: FnDid: 568
+}
+bb 5 {
+CleanUp: false
+    _7 = std::result::Result::<(), std::boxed::Box<dyn std::any::Any + std::marker::Send>>::unwrap(move _8) -> [return: bb6, unwind: bb8] @ Call: FnDid: 9195
+}
+bb 6 {
+CleanUp: false
+    drop(_1) -> [return: bb7, unwind continue] @ Drop
+}
+bb 7 {
+CleanUp: false
+    return @ Return
+}
+bb 8 {
+CleanUp: true
+    drop(_1) -> [return: bb9, unwind terminate(cleanup)] @ Drop
+}
+bb 9 {
+CleanUp: true
+    resume @ UnwindResume
+}
+
+DefId(0:8 ~ double_lock_1[39a8]::main::{closure#0})
+_0:  @ () 
+_1:  @ Closure(DefId(0:8 ~ double_lock_1[39a8]::main::{closure#0}), [i32, Binder(extern "RustCall" fn(()), []), (std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>,)]) 
+_2:  @ std::sync::MutexGuard<ReErased, i32> 
+_3:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_4:  @ &ReErased std::sync::Mutex<i32> 
+_5:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_6:  @ () 
+_7:  @ std::fmt::Arguments<ReErased> 
+_8:  @ &ReErased [&ReErased str] 
+_9:  @ std::sync::MutexGuard<ReErased, i32> 
+_10:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_11:  @ &ReErased std::sync::Mutex<i32> 
+_12:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_13:  @ () 
+_14:  @ std::fmt::Arguments<ReErased> 
+_15:  @ &ReErased [&ReErased str] 
+_16:  @ &ReErased [&ReErased str; 1_usize] 
+_17:  @ &ReErased [&ReErased str; 1_usize] 
+
+bb 0 {
+CleanUp: false
+    Assign((_5, &(_1.0: std::sync::Arc<std::sync::Mutex<i32>>))) @ _5=&(_1.0: std::sync::Arc<std::sync::Mutex<i32>>) @ Ref
+    _4 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _5) -> [return: bb1, unwind: bb16] @ Call: FnDid: 3101
+}
+bb 1 {
+CleanUp: false
+    _3 = std::sync::Mutex::<i32>::lock(_4) -> [return: bb2, unwind: bb16] @ Call: FnDid: 6375
+}
+bb 2 {
+CleanUp: false
+    _2 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _3) -> [return: bb3, unwind: bb16] @ Call: FnDid: 9195
+}
+bb 3 {
+CleanUp: false
+    Assign((_17, const _)) @ _17=const _ @ Use
+    Assign((_8, _17 as &[&str] (PointerCoercion(Unsize)))) @ _8=_17 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    _7 = std::fmt::Arguments::<'_>::new_const(move _8) -> [return: bb4, unwind: bb15] @ Call: FnDid: 9865
+}
+bb 4 {
+CleanUp: false
+    _6 = std::io::_print(move _7) -> [return: bb5, unwind: bb15] @ Call: FnDid: 3326
+}
+bb 5 {
+CleanUp: false
+    Assign((_12, &(_1.0: std::sync::Arc<std::sync::Mutex<i32>>))) @ _12=&(_1.0: std::sync::Arc<std::sync::Mutex<i32>>) @ Ref
+    _11 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _12) -> [return: bb6, unwind: bb15] @ Call: FnDid: 3101
+}
+bb 6 {
+CleanUp: false
+    _10 = std::sync::Mutex::<i32>::lock(_11) -> [return: bb7, unwind: bb15] @ Call: FnDid: 6375
+}
+bb 7 {
+CleanUp: false
+    _9 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _10) -> [return: bb8, unwind: bb15] @ Call: FnDid: 9195
+}
+bb 8 {
+CleanUp: false
+    Assign((_16, const _)) @ _16=const _ @ Use
+    Assign((_15, _16 as &[&str] (PointerCoercion(Unsize)))) @ _15=_16 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    _14 = std::fmt::Arguments::<'_>::new_const(move _15) -> [return: bb9, unwind: bb14] @ Call: FnDid: 9865
+}
+bb 9 {
+CleanUp: false
+    _13 = std::io::_print(move _14) -> [return: bb10, unwind: bb14] @ Call: FnDid: 3326
+}
+bb 10 {
+CleanUp: false
+    drop(_9) -> [return: bb11, unwind: bb15] @ Drop
+}
+bb 11 {
+CleanUp: false
+    drop(_2) -> [return: bb12, unwind: bb16] @ Drop
+}
+bb 12 {
+CleanUp: false
+    drop(_1) -> [return: bb13, unwind continue] @ Drop
+}
+bb 13 {
+CleanUp: false
+    return @ Return
+}
+bb 14 {
+CleanUp: true
+    drop(_9) -> [return: bb15, unwind terminate(cleanup)] @ Drop
+}
+bb 15 {
+CleanUp: true
+    drop(_2) -> [return: bb16, unwind terminate(cleanup)] @ Drop
+}
+bb 16 {
+CleanUp: true
+    drop(_1) -> [return: bb17, unwind terminate(cleanup)] @ Drop
+}
+bb 17 {
+CleanUp: true
+    resume @ UnwindResume
+}
+

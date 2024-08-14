@@ -5,7 +5,7 @@ use rustc_session::config;
 use std::{path::PathBuf, process, str, sync::Arc};
 use structopt::StructOpt;
 
-use crate::{context::Context, option::Options};
+use crate::{context::Context, option::Options, utils::{self, mir::ShowMir}};
 
 // use crate::{model::ModelPass};
 
@@ -76,15 +76,17 @@ impl Driver {
     /// print
     fn print_basic(&mut self, context: &mut Context) {
         let tcx = context.tcx;
-        for (did, name) in &context.all_funcs {
-            let mir = tcx.optimized_mir(did.as_local().unwrap()).clone();
-            if self.options.show_all_funcs {
-                println!("Discover Function: {}", name);
-            }
-            if self.options.show_all_mir {
-                println!("mir:{:#?}", mir.basic_blocks);
-            }
-        }
+        let mut show_mir = ShowMir::new(tcx);
+        show_mir.start();
+        // for (did, name) in &context.all_funcs {
+        //     let mir = tcx.optimized_mir(did.as_local().unwrap()).clone();
+        //     if self.options.show_all_funcs {
+        //         println!("Discover Function: {}", name);
+        //     }
+        //     if self.options.show_all_mir {
+        //         println!("mir:{:#?}", mir.basic_blocks);
+        //     }
+        // }
     }
 
     /// 注册策略

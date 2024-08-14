@@ -24,6 +24,7 @@ extern crate rustc_type_ir;
 mod option;
 mod driver;
 mod context;
+mod utils;
 // mod model;
 
 use option::Options;
