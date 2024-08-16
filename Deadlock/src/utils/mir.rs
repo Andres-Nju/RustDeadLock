@@ -64,7 +64,7 @@ impl<'tcx> Display for TerminatorKind<'tcx>{
                     _ => (),
                 }
             }
-            _ => ()
+            TerminatorKind::CoroutineDrop => todo!(),
         };
         s
     }

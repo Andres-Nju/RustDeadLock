@@ -25,6 +25,7 @@ mod option;
 mod driver;
 mod context;
 mod utils;
+mod analysis;
 // mod model;
 
 use option::Options;

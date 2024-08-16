@@ -11,6 +11,6 @@ itertools = "0.12.0"
 ansi_term = "0.12.1"
 colorful = "0.2.1"
 
-
 [package.metadata.rust-analyzer]
 rustc_private = true
+
