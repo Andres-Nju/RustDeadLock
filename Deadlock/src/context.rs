@@ -34,23 +34,21 @@ impl<'tcx> Context<'tcx> {
         let mut entry_func: Option<DefId> = None;
 
         let mut all_funcs = FxHashMap::default();
-        let hir_krate = tcx.hir();
-        for item_id in hir_krate.items() {
-            let local_did = item_id.owner_id.def_id;
-            match tcx.def_kind(local_did) {
+        for each_mir in tcx.mir_keys(()) {
+            let def_id = each_mir.to_def_id();
+            match tcx.def_kind(def_id) {
                 DefKind::Fn | DefKind::AssocFn => {
-                    let did = local_did.to_def_id();
-                    let name = tcx.item_name(did);
-                    if !all_funcs.contains_key(&did) {
+                    let name = tcx.item_name(def_id);
+                    if !all_funcs.contains_key(&def_id) {
                         if name.to_string() == options.entry_func {
-                            entry_func = Some(local_did.to_def_id());
+                            entry_func = Some(def_id);
                         }
-                        all_funcs.insert(did, name);
+                        all_funcs.insert(def_id, name);
                     }
                 }
                 _ => {}
             }
-        }
+	    }
 
         let entry_func = match entry_func {
             Some(did) => did,

@@ -5,9 +5,13 @@ use rustc_session::config;
 use std::{path::PathBuf, process, str, sync::Arc};
 use structopt::StructOpt;
 
-use crate::{context::Context, option::Options, utils::{self, mir::ShowMir}};
+use crate::{context::Context, 
+    option::Options, 
+    utils::{self, mir::{Display, ShowMir}},
+    analysis::callgraph::CallGraph,
+};
 
-// use crate::{model::ModelPass};
+
 
 /// 分析策略，每种策略是pass的数组，按顺序执行
 struct Strategy {
@@ -77,11 +81,12 @@ impl Driver {
     fn print_basic(&mut self, context: &mut Context) {
         let tcx = context.tcx;
         let mut show_mir = ShowMir::new(tcx);
-        show_mir.start();
+        let mut call_graph = CallGraph::new(tcx);
+        call_graph.start();
         // for (did, name) in &context.all_funcs {
         //     let mir = tcx.optimized_mir(did.as_local().unwrap()).clone();
         //     if self.options.show_all_funcs {
-        //         println!("Discover Function: {}", name);
+        //         println!("Discover Function: {} {}", did.display(), name);
         //     }
         //     if self.options.show_all_mir {
         //         println!("mir:{:#?}", mir.basic_blocks);
