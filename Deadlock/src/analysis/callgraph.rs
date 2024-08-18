@@ -1,4 +1,5 @@
 /// Copied from RAP
+/// Reference: RAP: https://github.com/Artisan-Lab/RAP
 
 use rustc_middle::{mir::{TerminatorKind, Operand}};
 use rustc_middle::ty::{self,TyCtxt};
@@ -18,6 +19,8 @@ pub type FnMap = HashMap<Option<HirId>, Vec<(BodyId, Span)>>;
 pub struct CallGraph<'tcx> {
     pub tcx: TyCtxt<'tcx>,
     pub edges: HashSet<(DefId, DefId)>,
+    entry: Option<DefId>,
+    pub topo: Vec<DefId>,
 }
 
 impl<'tcx> CallGraph<'tcx>{
@@ -25,6 +28,8 @@ impl<'tcx> CallGraph<'tcx>{
         Self{
             tcx,
             edges: HashSet::new(),
+            entry: None,
+            topo: vec![],
         }
     }
 
@@ -34,13 +39,14 @@ impl<'tcx> CallGraph<'tcx>{
         for (_, &ref vec) in & fn_items {
             for (body_id, _) in vec{
                 let body_did = self.tcx.hir().body_owner_def_id(*body_id).to_def_id();
+                if self.tcx.def_path_str(body_did) == "main"{
+                    self.entry = Some(body_did);
+                }
                 self.find_callees(body_did);
             }
         }
-        println!("Show all edges of the call graph:");
-        for (caller, callee) in &self.edges {
-            println!("  {} -> {}", self.tcx.def_path_str(*caller), self.tcx.def_path_str(*callee));
-        }
+        self.topo_sort();
+        println!("Finish callgraph analysis");
     }
 
     pub fn find_callees(&mut self,def_id: DefId) {
@@ -52,13 +58,62 @@ impl<'tcx> CallGraph<'tcx>{
                     TerminatorKind::Call{func, ..} => {
                         if let Operand::Constant(func_constant) = func{
                             if let ty::FnDef(ref callee_def_id, _) = func_constant.const_.ty().kind() {
-				self.edges.insert((def_id,*callee_def_id));
+				                self.edges.insert((def_id,*callee_def_id));
                             }
                         }
                     }
                     _ => {}
                 }
             }
+        }
+        // TODO: if cannot find callee locally?
+    }
+
+    pub fn topo_sort(&mut self) {
+        let mut visited = HashSet::new();
+        let mut stack = Vec::new();
+
+        if let Some(entry_id) = self.entry {
+            if !visited.contains(&entry_id) {
+                self.dfs(entry_id, &mut visited, &mut stack);
+            }
+        } else {
+            // if there's no entry, every caller is the entry.
+            for &(caller, _) in &self.edges {
+                if !visited.contains(&caller) {
+                    self.dfs(caller, &mut visited, &mut stack);
+                }
+            }
+        }
+
+        while let Some(node) = stack.pop() {
+            self.topo.push(node);
+        }
+    }
+
+    // dfs to generate topo sort
+    fn dfs(&self, node: DefId, visited: &mut HashSet<DefId>, stack: &mut Vec<DefId>) {
+        visited.insert(node);
+        
+        for &(_, callee) in self.edges.iter().filter(|&&(caller, _)| caller == node) {
+            if !visited.contains(&callee) {
+                self.dfs(callee, visited, stack);
+            }
+        }
+        
+        stack.push(node);
+    }
+
+    pub fn print_call_edges(&self){
+        println!("Show all edges of the call graph:");
+        for (caller, callee) in &self.edges {
+            println!("  {} -> {}", self.tcx.def_path_str(*caller), self.tcx.def_path_str(*callee));
+        }
+    }
+    pub fn print_topo(&self){
+        println!("Show the topo sort of the call graph:");
+        for f in &self.topo{
+            println!("{} ", self.tcx.def_path_str(f));
         }
     }
 }
