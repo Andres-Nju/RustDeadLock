@@ -1,0 +1,16 @@
+Show MIR
+DefId(0:3 ~ test[fc21]::main)
+_0:  @ () 
+_1:  @ u32 
+
+bb 0 {
+CleanUp: false
+    StorageLive(_1) @ StorageLive
+    Assign((_1, const 32_u32)) @ _1=const 32_u32 @ Use
+    FakeRead((ForLet(None), _1)) @ FakeRead
+    AscribeUserType((_1, UserTypeProjection { base: UserType(1), projs: [] }), o) @ AscribeUserType
+    Assign((_0, const ())) @ _0=const () @ Use
+    StorageDead(_1) @ StorageDead
+    return @ Return
+}
+
