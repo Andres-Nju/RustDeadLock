@@ -1,7 +1,7 @@
 /// Copied from RAP
 /// Reference: RAP: https://github.com/Artisan-Lab/RAP
 
-use rustc_middle::{mir::{TerminatorKind, Operand}};
+use rustc_middle::{mir::{Operand, TerminatorKind}};
 use rustc_middle::ty::{self,TyCtxt};
 use rustc_hir::{def_id::DefId,intravisit::Visitor,BodyId,HirId,ItemKind};
 use rustc_span::Span;

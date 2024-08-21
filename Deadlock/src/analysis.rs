@@ -3,7 +3,7 @@ use std::fmt::format;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use callgraph::CallGraph;
-use rustc_hir::{def_id::DefId};
+use rustc_hir::{def_id::DefId, definitions::DefPathData};
 use rustc_middle::{mir::{BasicBlock, BasicBlockData, BasicBlocks, HasLocalDecls, LocalDecls, Successors}, ty::{self, Ty, TyCtxt, TyKind}};
 use lock::{Lock, LockSetFact};
 use rustc_middle::mir::{
@@ -108,7 +108,35 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                         work_list.push(target.as_usize());
                     },
                     rustc_middle::mir::TerminatorKind::Call { func, args, destination, target, unwind, call_source, fn_span } => {
-                        // TODO: interprocedural
+                        match func{
+                            mir::Operand::Constant(constant) => {
+                                match constant.ty().kind(){
+                                    rustc_type_ir::TyKind::FnDef(fn_id, _) => {
+                                        // _* = func(args) -> [return: bb*, unwind: bb*] @ Call: FnDid: *
+                                        // interprocedural analysis just resolves the `func(args)` part, need to resolve the 
+                                        if self.tcx.is_mir_available(fn_id){
+                                            // TODO: interprocedural
+                                        }
+                                        let def_path = self.tcx.def_path(fn_id.clone());
+                                        if let DefPathData::ValueNs(name) = &def_path.data[def_path.data.len() - 1].data{
+                                            println!("{:?}", call_source);
+                                            if name.as_str() == "lock"{ // lock() is called, next resolve the receiver `_*`
+
+                                            }
+                                        }
+                                        
+                                    },
+                                    // maybe problematic
+                                    rustc_type_ir::TyKind::FnPtr(_) => panic!("TODO: FnPtr"),
+                                    rustc_type_ir::TyKind::Closure(_, _) => panic!("TODO: closure"),
+                                    _ => (),
+                                }
+                            },
+                            _ => (),
+                        }
+                        if let Some(bb) = target{
+                            work_list.push(bb.as_usize());
+                        }
                     },
                     rustc_middle::mir::TerminatorKind::Assert { target, .. } => {
                         work_list.push(target.as_usize());
@@ -134,6 +162,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     pub fn visit_bb(&mut self, def_id: DefId, bb_index: usize, bbs: &BasicBlocks, decls: &LocalDecls) -> bool{
         // TODO: maybe clean up bb?
         let mut flag = false;
+        
         // if fact[bb] is none, initialize one
         self.lock_set_facts.entry((def_id, bb_index)).or_insert_with(|| {
             flag = true;
@@ -141,14 +170,15 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         });
         // traverse the bb's statements
         let current_bb_data = &bbs[BasicBlock::from(bb_index)];
-        current_bb_data.statements.iter().for_each(|statement| self.visit_statement(statement, decls));
+        current_bb_data.statements.iter().for_each(|statement| flag |= self.visit_statement(statement, decls));
         flag
     }
 
-    pub fn visit_statement(&mut self, statement: &Statement, decls: &LocalDecls){
+    pub fn visit_statement(&mut self, statement: &Statement, decls: &LocalDecls) -> bool{
+        let flag = false;
         match &statement.kind{
             rustc_middle::mir::StatementKind::Assign(_) => {
-
+                
             },
             rustc_middle::mir::StatementKind::FakeRead(_) => (),
             rustc_middle::mir::StatementKind::SetDiscriminant { .. } => (),
@@ -179,6 +209,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             rustc_middle::mir::StatementKind::ConstEvalCounter => (),
             rustc_middle::mir::StatementKind::Nop => (),
         }
+        flag
     }
 }
 
@@ -188,6 +219,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 // These locals have fixed storage for the duration of the body.
 use rustc_index::bit_set::BitSet;
 use rustc_middle::mir::{self, Local};
+use rustc_target::abi::VariantIdx;
 pub fn always_storage_live_locals(body: &Body<'_>) -> BitSet<Local> {
     
 
