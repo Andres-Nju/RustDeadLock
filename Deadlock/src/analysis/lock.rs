@@ -1,20 +1,20 @@
 use rustc_middle::ty::Ty;
 use rustc_hash::FxHashSet;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Mutex{
     pub name: String,
     pub live: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct RwLock{
     pub name: String,
     pub live: bool,
     pub is_write: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Lock{
     Mutex(Mutex),
     RwLock(RwLock),

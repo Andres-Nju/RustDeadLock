@@ -76,9 +76,14 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         for (local, decl) in decls.iter_enumerated(){
             let ty = decl.ty;
             let index = format!("_{}", local.as_usize());
-            if self.var_debug_info.contains_key(&index) && is_lock(&ty){
-                // TODO: 这里读了ty两次，判断一次，插入一次
-                self.local_locks.insert(local.as_usize(), Lock::new(self.var_debug_info[&index].clone(), &ty));
+            // if self.var_debug_info.contains_key(&index) && is_lock(&ty){
+            //     // TODO: 这里读了ty两次，判断一次，插入一次
+            //     self.local_locks.insert(local.as_usize(), Lock::new(self.var_debug_info[&index].clone(), &ty));
+            // }
+
+            // problematic
+            if is_lock(&ty){
+                self.local_locks.insert(local.as_usize(), Lock::new(local.as_usize().to_string(), &ty));
             }
             // println!("{:?}", decl.source_info);
         }
@@ -119,9 +124,19 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                         }
                                         let def_path = self.tcx.def_path(fn_id.clone());
                                         if let DefPathData::ValueNs(name) = &def_path.data[def_path.data.len() - 1].data{
-                                            println!("{:?}", call_source);
-                                            if name.as_str() == "lock"{ // lock() is called, next resolve the receiver `_*`
-
+                                            // println!("{:?}", call_source);
+                                            if name.as_str() == "lock"{ // lock() is called, next resolve the arg 
+                                                // _* = std::sync::Mutex::<T>::lock(move _*)
+                                                assert_eq!(1, args.len());
+                                                match &args[0]{
+                                                    mir::Operand::Move(p) => {
+                                                        assert!(self.local_locks.contains_key(&p.local.as_usize()));
+                                                        let mut facts = self.lock_set_facts.get_mut(&(def_id, current_bb_index)).unwrap();
+                                                        facts.insert(self.local_locks[&p.local.as_usize()].clone());
+                                                        // println!("{:?}", self.lock_set_facts[&(def_id, current_bb_index)]);
+                                                    },
+                                                    _ => todo!(),
+                                                }
                                             }
                                         }
                                         
@@ -156,6 +171,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                     },
                 }
             }
+            println!("{:?}", self.lock_set_facts[&(def_id, current_bb_index)]);
         }  
     }
 
@@ -168,13 +184,27 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             flag = true;
             FxHashSet::default()
         });
+        // merge the pres
+        let temp = self.lock_set_facts[&(def_id, bb_index)].clone();
+        // println!("pres are {:?}", bbs.predecessors().get(BasicBlock::from_usize(bb_index)).unwrap());
+        for pre in bbs.predecessors().get(BasicBlock::from_usize(bb_index)).unwrap(){
+            // refactor the lock_set_facts access
+            self.lock_set_facts.entry((def_id, pre.as_usize())).or_insert_with(|| {
+                flag = true;
+                FxHashSet::default()
+            }); 
+            let pre_fact = self.lock_set_facts[&(def_id, pre.as_usize())].clone();
+            self.lock_set_facts.get_mut(&(def_id, bb_index)).unwrap().extend(pre_fact);
+        }
+        flag |= temp.eq(&self.lock_set_facts[&(def_id, bb_index)]);
         // traverse the bb's statements
         let current_bb_data = &bbs[BasicBlock::from(bb_index)];
-        current_bb_data.statements.iter().for_each(|statement| flag |= self.visit_statement(statement, decls));
+        current_bb_data.statements.iter().for_each(|statement| flag |= self.visit_statement(def_id, bb_index, statement, decls));
         flag
     }
 
-    pub fn visit_statement(&mut self, statement: &Statement, decls: &LocalDecls) -> bool{
+    // pub fn merge(&mut self, )
+    pub fn visit_statement(&mut self, def_id: DefId, bb_index: usize, statement: &Statement, decls: &LocalDecls) -> bool{
         let flag = false;
         match &statement.kind{
             rustc_middle::mir::StatementKind::Assign(_) => {
@@ -188,7 +218,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                     if let Some(lock) = self.local_locks.get_mut(&local.as_usize()) {
                         lock.set_live();
                     }
-                    println!("after set alive: {:?}", self.local_locks);
+                    // println!("after set alive: {:?}", self.local_locks);
                 }
             },
             rustc_middle::mir::StatementKind::StorageDead(local) => {
@@ -196,7 +226,19 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                     if let Some(lock) = self.local_locks.get_mut(&local.as_usize()) {
                         lock.set_dead();
                     }
-                    println!("after set dead: {:?}", self.local_locks);
+                    // kill the lock
+                    // refactor
+                    // TODO: 这里有问题，应该是MutexGuard dead的时候去掉锁
+                    let to_remove = self.lock_set_facts.get(&(def_id, bb_index)).unwrap().iter().find(|lock| {
+                        match (*lock){
+                            Lock::Mutex(m) => m.name == local.as_usize().to_string(),
+                            Lock::RwLock(m) => m.name == local.as_usize().to_string(),
+                        }
+                    }).cloned();
+                    if let Some(lock) = to_remove{
+                        self.lock_set_facts.get_mut(&(def_id, bb_index)).unwrap().remove(&lock);
+                    }
+                    // println!("after set dead: {:?}", self.local_locks);
                 }
             },
             rustc_middle::mir::StatementKind::Retag(_, _) => (),
