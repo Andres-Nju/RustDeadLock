@@ -1,16 +1,144 @@
 Show MIR
-DefId(0:3 ~ test[fc21]::main)
+DefId(0:6 ~ test[fc21]::main)
 _0:  @ () 
-_1:  @ u32 
+_1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_2:  @ std::sync::Mutex<i32> 
+_3:  @ std::sync::MutexGuard<ReErased, i32> 
+_4:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_5:  @ &ReErased std::sync::Mutex<i32> 
+_6:  @ &ReErased std::sync::Mutex<i32> 
+_7:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_8:  @ () 
+_9:  @ () 
+_10:  @ std::fmt::Arguments<ReErased> 
+_11:  @ &ReErased [&ReErased str] 
+_12:  @ &ReErased [&ReErased str; 2_usize] 
+_13:  @ &ReErased [&ReErased str; 2_usize] 
+_14:  @ [&ReErased str; 2_usize] 
+_15:  @ &ReErased [core::fmt::rt::Argument<ReErased>] 
+_16:  @ &ReErased [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_17:  @ &ReErased [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_18:  @ [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_19:  @ core::fmt::rt::Argument<ReErased> 
+_20:  @ &ReErased std::sync::MutexGuard<ReErased, i32> 
+_21:  @ &ReErased std::sync::MutexGuard<ReErased, i32> 
 
 bb 0 {
 CleanUp: false
     StorageLive(_1) @ StorageLive
-    Assign((_1, const 32_u32)) @ _1=const 32_u32 @ Use
+    StorageLive(_2) @ StorageLive
+    _2 = std::sync::Mutex::<i32>::new(const 0_i32) -> [return: bb1, unwind: bb14] @ Call: FnDid: 6372
+}
+bb 1 {
+CleanUp: false
+    _1 = std::sync::Arc::<std::sync::Mutex<i32>>::new(move _2) -> [return: bb2, unwind: bb14] @ Call: FnDid: 6025
+}
+bb 2 {
+CleanUp: false
+    StorageDead(_2) @ StorageDead
     FakeRead((ForLet(None), _1)) @ FakeRead
-    AscribeUserType((_1, UserTypeProjection { base: UserType(1), projs: [] }), o) @ AscribeUserType
+    StorageLive(_3) @ StorageLive
+    StorageLive(_4) @ StorageLive
+    StorageLive(_5) @ StorageLive
+    StorageLive(_6) @ StorageLive
+    StorageLive(_7) @ StorageLive
+    Assign((_7, &_1)) @ _7=&_1 @ Ref
+    _6 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _7) -> [return: bb3, unwind: bb13] @ Call: FnDid: 3101
+}
+bb 3 {
+CleanUp: false
+    Assign((_5, &(*_6))) @ _5=&(*_6) @ Ref
+    StorageDead(_7) @ StorageDead
+    _4 = std::sync::Mutex::<i32>::lock(move _5) -> [return: bb4, unwind: bb13] @ Call: FnDid: 6375
+}
+bb 4 {
+CleanUp: false
+    StorageDead(_5) @ StorageDead
+    _3 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _4) -> [return: bb5, unwind: bb12] @ Call: FnDid: 9195
+}
+bb 5 {
+CleanUp: false
+    StorageDead(_4) @ StorageDead
+    FakeRead((ForLet(None), _3)) @ FakeRead
+    StorageDead(_6) @ StorageDead
+    StorageLive(_8) @ StorageLive
+    StorageLive(_9) @ StorageLive
+    StorageLive(_10) @ StorageLive
+    StorageLive(_11) @ StorageLive
+    StorageLive(_12) @ StorageLive
+    StorageLive(_13) @ StorageLive
+    StorageLive(_14) @ StorageLive
+    Assign((_14, [const "", const "\n"])) @ _14=[const "", const "\n"] @ Aggregate
+    Assign((_13, &_14)) @ _13=&_14 @ Ref
+    Assign((_12, &(*_13))) @ _12=&(*_13) @ Ref
+    Assign((_11, move _12 as &[&str] (PointerCoercion(Unsize)))) @ _11=move _12 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    StorageDead(_12) @ StorageDead
+    StorageLive(_15) @ StorageLive
+    StorageLive(_16) @ StorageLive
+    StorageLive(_17) @ StorageLive
+    StorageLive(_18) @ StorageLive
+    StorageLive(_19) @ StorageLive
+    StorageLive(_20) @ StorageLive
+    StorageLive(_21) @ StorageLive
+    Assign((_21, &_3)) @ _21=&_3 @ Ref
+    Assign((_20, &(*_21))) @ _20=&(*_21) @ Ref
+    _19 = core::fmt::rt::Argument::<'_>::new_display::<std::sync::MutexGuard<'_, i32>>(move _20) -> [return: bb6, unwind: bb11] @ Call: FnDid: 9786
+}
+bb 6 {
+CleanUp: false
+    StorageDead(_20) @ StorageDead
+    Assign((_18, [move _19])) @ _18=[move _19] @ Aggregate
+    StorageDead(_19) @ StorageDead
+    Assign((_17, &_18)) @ _17=&_18 @ Ref
+    Assign((_16, &(*_17))) @ _16=&(*_17) @ Ref
+    Assign((_15, move _16 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)))) @ _15=move _16 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)) @ Cast
+    StorageDead(_16) @ StorageDead
+    _10 = std::fmt::Arguments::<'_>::new_v1(move _11, move _15) -> [return: bb7, unwind: bb11] @ Call: FnDid: 9866
+}
+bb 7 {
+CleanUp: false
+    StorageDead(_15) @ StorageDead
+    StorageDead(_11) @ StorageDead
+    _9 = std::io::_print(move _10) -> [return: bb8, unwind: bb11] @ Call: FnDid: 3326
+}
+bb 8 {
+CleanUp: false
+    StorageDead(_10) @ StorageDead
+    StorageDead(_21) @ StorageDead
+    StorageDead(_18) @ StorageDead
+    StorageDead(_17) @ StorageDead
+    StorageDead(_14) @ StorageDead
+    StorageDead(_13) @ StorageDead
+    StorageDead(_9) @ StorageDead
+    Assign((_8, const ())) @ _8=const () @ Use
+    StorageDead(_8) @ StorageDead
     Assign((_0, const ())) @ _0=const () @ Use
+    drop(_3) -> [return: bb9, unwind: bb13] @ Drop
+}
+bb 9 {
+CleanUp: false
+    StorageDead(_3) @ StorageDead
+    drop(_1) -> [return: bb10, unwind: bb14] @ Drop
+}
+bb 10 {
+CleanUp: false
     StorageDead(_1) @ StorageDead
     return @ Return
+}
+bb 11 {
+CleanUp: true
+    drop(_3) -> [return: bb13, unwind terminate(cleanup)] @ Drop
+}
+bb 12 {
+CleanUp: true
+    drop(_4) -> [return: bb13, unwind terminate(cleanup)] @ Drop
+}
+bb 13 {
+CleanUp: true
+    drop(_1) -> [return: bb14, unwind terminate(cleanup)] @ Drop
+}
+bb 14 {
+CleanUp: true
+    resume @ UnwindResume
 }
 

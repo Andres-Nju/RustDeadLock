@@ -20,9 +20,15 @@ pub mod lock;
 pub struct LockSetAnalysis<'tcx>{
     tcx: TyCtxt<'tcx>, 
     // call_graph: CallGraph<'tcx>,
-    // a DefId + bb index pair determines a bb
+    
+    // whole-program data
+    // a DefId + BasicBlock's index pair determines a bb
     lock_set_facts: FxHashMap<(DefId, usize), LockSetFact>,
+
+    // intra-analysis data
+    // record all local locks in current function body
     local_locks: FxHashMap<usize, Lock>,
+    // record all variable debug info in current function body
     var_debug_info: FxHashMap<String, String>,
 }
 
@@ -30,7 +36,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     pub fn new(tcx: TyCtxt<'tcx>, call_graph: CallGraph<'tcx>) -> Self{
         Self{
             tcx,
-            // call_graph,
             lock_set_facts: FxHashMap::default(),
             local_locks: FxHashMap::default(),
             var_debug_info: FxHashMap::default(),
@@ -39,6 +44,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 
     pub fn run_analysis(&mut self){
         for mir_key in self.tcx.mir_keys(()){
+            // TODO: which order to traverse the program?
             let def_id = mir_key.to_def_id();
             // let body = self.tcx.instance_mir(ty::InstanceDef::Item(def_id));
             // TODO: which mir to choose? optimized or raw with storage statements?
@@ -48,22 +54,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         }
     }
     pub fn intra_lock_set_analysis(&mut self, def_id: DefId, body: &Body<'tcx>){
-        // // init the live_lock hashmap: 
-        // // Some locals have no `StorageLive` or `StorageDead` statements within the entire MIR body.
-        // // These locals are implicitly allocated for the full duration of the function. There is a
-        // // convenience method at `rustc_mir_dataflow::storage::always_storage_live_locals` for
-        // // computing these locals. 
-        // let decls = body.local_decls();
-        // let always_alive_decls = always_storage_live_locals(body);
-        // always_alive_decls.iter().for_each(|local| { // TODO: if the local without storage init is the return value?
-        //     let ty = decls[local].ty;
-        //     if is_lock(&ty){
-        //         // TODO: 这里读了ty两次，判断一次，插入一次
-        //         self.local_locks.insert(local.as_usize(), Lock::new(local.as_usize().to_string(), &ty));
-        //     }
-        // });
-        // println!("{:?}", self.live_locks);
-
         // first, read the LocalDecls to get all the local locks
         // note: need to resolve the var_debug_info to get the var names
         self.local_locks.clear();
@@ -71,7 +61,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         for (_, var) in body.var_debug_info.iter().enumerate(){
             self.var_debug_info.insert(format!("{:?}", var.value), var.name.to_string());
         }
-        // println!("{:?}", self.var_debug_info);
+
+        // than resolve all the local declarations before statements
         let decls = body.local_decls();
         for (local, decl) in decls.iter_enumerated(){
             let ty = decl.ty;
@@ -85,11 +76,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             if is_lock(&ty){
                 self.local_locks.insert(local.as_usize(), Lock::new(local.as_usize().to_string(), &ty));
             }
-            // println!("{:?}", decl.source_info);
         }
-        // println!("{:?}", self.local_locks);
 
-        // let mut work_list: Vec<usize> = (0..body.basic_blocks.len()).collect();
         let mut work_list = vec![0];
         while !work_list.is_empty(){
             let current_bb_index = work_list.pop().expect("Elements in non-empty work_list should always be valid!");
@@ -178,7 +166,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     pub fn visit_bb(&mut self, def_id: DefId, bb_index: usize, bbs: &BasicBlocks, decls: &LocalDecls) -> bool{
         // TODO: maybe clean up bb?
         let mut flag = false;
-        
         // if fact[bb] is none, initialize one
         self.lock_set_facts.entry((def_id, bb_index)).or_insert_with(|| {
             flag = true;
@@ -186,26 +173,27 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         });
         // merge the pres
         let temp = self.lock_set_facts[&(def_id, bb_index)].clone();
-        // println!("pres are {:?}", bbs.predecessors().get(BasicBlock::from_usize(bb_index)).unwrap());
         for pre in bbs.predecessors().get(BasicBlock::from_usize(bb_index)).unwrap(){
             // refactor the lock_set_facts access
-            self.lock_set_facts.entry((def_id, pre.as_usize())).or_insert_with(|| {
-                flag = true;
-                FxHashSet::default()
-            }); 
-            let pre_fact = self.lock_set_facts[&(def_id, pre.as_usize())].clone();
-            self.lock_set_facts.get_mut(&(def_id, bb_index)).unwrap().extend(pre_fact);
+            self.merge(pre, def_id, bb_index);
         }
-        flag |= temp.eq(&self.lock_set_facts[&(def_id, bb_index)]);
         // traverse the bb's statements
         let current_bb_data = &bbs[BasicBlock::from(bb_index)];
-        current_bb_data.statements.iter().for_each(|statement| flag |= self.visit_statement(def_id, bb_index, statement, decls));
+        current_bb_data.statements.iter().for_each(|statement| self.visit_statement(def_id, bb_index, statement, decls));
+        flag |= temp.eq(&self.lock_set_facts[&(def_id, bb_index)]);
         flag
     }
 
-    // pub fn merge(&mut self, )
-    pub fn visit_statement(&mut self, def_id: DefId, bb_index: usize, statement: &Statement, decls: &LocalDecls) -> bool{
-        let flag = false;
+    pub fn merge(&mut self, pre: &BasicBlock, def_id: DefId, bb_index: usize){
+        // merge the lock set
+        self.lock_set_facts.entry((def_id, pre.as_usize())).or_insert_with(|| {
+            FxHashSet::default()
+        }); 
+        let pre_fact = self.lock_set_facts[&(def_id, pre.as_usize())].clone();
+        self.lock_set_facts.get_mut(&(def_id, bb_index)).unwrap().extend(pre_fact);
+    }
+
+    pub fn visit_statement(&mut self, def_id: DefId, bb_index: usize, statement: &Statement, decls: &LocalDecls){
         match &statement.kind{
             rustc_middle::mir::StatementKind::Assign(_) => {
                 
@@ -251,7 +239,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             rustc_middle::mir::StatementKind::ConstEvalCounter => (),
             rustc_middle::mir::StatementKind::Nop => (),
         }
-        flag
     }
 }
 
