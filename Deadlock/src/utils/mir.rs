@@ -226,6 +226,7 @@ pub struct ShowMir<'tcx> {
 fn display_mir(did: DefId, body: &Body) {
     println!("{}", did.display());
     println!("{}", body.local_decls.display());
+    println!("{:?}", body.var_debug_info);
     println!("{}", body.basic_blocks.display());
 }
 

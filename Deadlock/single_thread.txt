@@ -107,6 +107,7 @@ _103:  @ &ReErased i32
 _104:  @ &ReErased i32 
 _105:  @ &ReErased std::sync::MutexGuard<ReErased, i32> 
 
+[mutex1 => _1, mutex2 => _3, num1 => _6, num2 => _31, num1 => _55, num2 => _60]
 bb 0 {
 CleanUp: false
     StorageLive(_1) @ StorageLive
