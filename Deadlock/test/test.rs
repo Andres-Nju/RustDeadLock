@@ -1,11 +1,11 @@
-fn tt(a: i32){
-
+use std::sync::Arc;
+struct A{
+    a: i32,
 }
-fn ttt(a: String){}
 fn main(){
-    let a = 10;
-    tt(a);
-    let b = "123".to_string();
-    ttt(b);
+    let mut aa = A{a: 10};
+    aa.a = ttt(100);
 }
-
+fn ttt(_a: i32) -> i32{
+    _a
+}

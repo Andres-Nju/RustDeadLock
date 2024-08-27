@@ -1,11 +1,15 @@
-use std::fmt::format;
+use std::{fmt::format, usize};
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use callgraph::CallGraph;
 use rustc_hir::{def_id::DefId, definitions::DefPathData};
-use rustc_middle::{mir::{BasicBlock, BasicBlockData, BasicBlocks, HasLocalDecls, LocalDecls, Successors}, ty::{self, Ty, TyCtxt, TyKind}};
+use rustc_middle::{
+    mir::{BasicBlock, BasicBlockData, BasicBlocks, HasLocalDecls, LocalDecls, Successors,VarDebugInfoContents,Place,Rvalue}, 
+    ty::{self, Ty, TyCtxt, TyKind}
+};
 use lock::{Lock, LockSetFact};
+use alias::Node;
 use rustc_middle::mir::{
     Location,
     Body,
@@ -16,6 +20,8 @@ use rustc_middle::mir::{
 mod visitor;
 pub mod callgraph;
 pub mod lock;
+pub mod alias;
+
 
 pub struct LockSetAnalysis<'tcx>{
     tcx: TyCtxt<'tcx>, 
@@ -25,11 +31,18 @@ pub struct LockSetAnalysis<'tcx>{
     // a DefId + BasicBlock's index pair determines a bb
     lock_set_facts: FxHashMap<(DefId, usize), LockSetFact>,
 
+
+    // Lock Flow Graph: record 
+    // lock_flow_graph: FxHashMap<DefId, IndexVec<Local, Node>>,
+    alias_flow_graph: FxHashMap<DefId, FxHashMap<usize, Node<'tcx>>>,
+
+
     // intra-analysis data
     // record all local locks in current function body
     local_locks: FxHashMap<usize, Lock>,
     // record all variable debug info in current function body
-    var_debug_info: FxHashMap<String, String>,
+    // TODO: shadow nested scope
+    var_debug_info: FxHashMap<usize, String>,
 }
 
 impl<'tcx> LockSetAnalysis<'tcx> {
@@ -37,6 +50,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         Self{
             tcx,
             lock_set_facts: FxHashMap::default(),
+            alias_flow_graph: FxHashMap::default(),
             local_locks: FxHashMap::default(),
             var_debug_info: FxHashMap::default(),
         }
@@ -56,17 +70,31 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     pub fn intra_lock_set_analysis(&mut self, def_id: DefId, body: &Body<'tcx>){
         // first, read the LocalDecls to get all the local locks
         // note: need to resolve the var_debug_info to get the var names
+        self.alias_flow_graph.entry(def_id).or_insert_with(|| {
+            FxHashMap::default()
+        });
         self.local_locks.clear();
         self.var_debug_info.clear(); // TODO: closure move? how to clear
         for (_, var) in body.var_debug_info.iter().enumerate(){
-            self.var_debug_info.insert(format!("{:?}", var.value), var.name.to_string());
+            let mut a = usize::MAX;
+            if let VarDebugInfoContents::Place(p) = &var.value{
+                a = p.local.as_usize();
+            }
+            else {
+                todo!();
+            }
+            self.var_debug_info.insert(a, var.name.to_string());
         }
 
         // than resolve all the local declarations before statements
+        for arg in body.args_iter(){
+            // TODO: the args, should be processed in inter-procedural analysis
+        }
         let decls = body.local_decls();
+        let alias_map = self.alias_flow_graph.get_mut(&def_id).unwrap();
         for (local, decl) in decls.iter_enumerated(){
             let ty = decl.ty;
-            let index = format!("_{}", local.as_usize());
+            let index = local.as_usize();
             // if self.var_debug_info.contains_key(&index) && is_lock(&ty){
             //     // TODO: 这里读了ty两次，判断一次，插入一次
             //     self.local_locks.insert(local.as_usize(), Lock::new(self.var_debug_info[&index].clone(), &ty));
@@ -76,7 +104,14 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             if is_lock(&ty){
                 self.local_locks.insert(local.as_usize(), Lock::new(local.as_usize().to_string(), &ty));
             }
+            // add named owned variables into alias graph first
+            // this is because all unnamed temps, or named references are derived from them
+            if self.var_debug_info.contains_key(&index) && !ty.is_ref(){
+                alias_map.insert(index, Node::new_owned(index, ty));
+            }
         }
+        // println!("{:?}", self.var_debug_info);
+        // println!("{:?}", alias_map);
 
         let mut work_list = vec![0];
         while !work_list.is_empty(){
@@ -106,10 +141,27 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                 match constant.ty().kind(){
                                     rustc_type_ir::TyKind::FnDef(fn_id, _) => {
                                         // _* = func(args) -> [return: bb*, unwind: bb*] @ Call: FnDid: *
+                                        // ^
+                                        // |
+                                        // This _* is always a variable/temp to receive the return value
+                                        // i.e., do not need to resolve the projection of destination
                                         // interprocedural analysis just resolves the `func(args)` part, need to resolve the 
                                         if self.tcx.is_mir_available(fn_id){
                                             // TODO: interprocedural
                                         }
+
+                                        // TODO: model some function calls:
+                                        // deref, clone ... 
+                                        // FIXME: now we just assume that the destination is an owned variable
+                                        // i.e., we assume that functions never return a reference
+                                        let mut alias_map = self.alias_flow_graph.get_mut(&def_id).unwrap();
+                                        // or just let left = destination.local
+                                        let left = resolve_project(destination, alias_map);
+                                        alias_map.insert(left, Node::new_owned(left, decls[destination.local].ty));
+
+
+
+                                        // FIXME
                                         let def_path = self.tcx.def_path(fn_id.clone());
                                         if let DefPathData::ValueNs(name) = &def_path.data[def_path.data.len() - 1].data{
                                             // println!("{:?}", call_source);
@@ -159,7 +211,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                     },
                 }
             }
-            println!("{:?}", self.lock_set_facts[&(def_id, current_bb_index)]);
+            println!("{:?}", self.alias_flow_graph[&def_id]);
+            // println!("{:?}", self.lock_set_facts[&(def_id, current_bb_index)]);
         }  
     }
 
@@ -195,8 +248,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 
     pub fn visit_statement(&mut self, def_id: DefId, bb_index: usize, statement: &Statement, decls: &LocalDecls){
         match &statement.kind{
-            rustc_middle::mir::StatementKind::Assign(_) => {
-                
+            rustc_middle::mir::StatementKind::Assign(ref assign) => {
+                self.visit_assign(&def_id, &assign.0, &assign.1);
             },
             rustc_middle::mir::StatementKind::FakeRead(_) => (),
             rustc_middle::mir::StatementKind::SetDiscriminant { .. } => (),
@@ -240,18 +293,67 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             rustc_middle::mir::StatementKind::Nop => (),
         }
     }
+
+    pub fn visit_assign(&mut self, def_id: &DefId, lhs: &Place, rhs: &Rvalue){
+        let alias_map = self.alias_flow_graph.get_mut(def_id).unwrap();
+        // resolve lhs
+        let left = resolve_project(lhs, alias_map);
+        // resolve rhs
+        match rhs{
+            Rvalue::Use(op) => {
+                match op{
+                    mir::Operand::Copy(p) => {
+                        let right = resolve_project(p, alias_map);
+                        // only if strict ssa can we insert directly
+                        // if Copy, just clone the right to left
+                        let mut lNode = alias_map.get(&right).unwrap().clone();
+                        lNode.set_index(left);
+                        alias_map.insert(left, lNode);
+                    },
+                    mir::Operand::Move(p) => {
+                        let right = resolve_project(p, alias_map);
+                        // only if strict ssa can we insert directly
+                        // if Move, just clone the right to left
+                        // we can do this because those referents that right points to can be cloned to left;
+                        // and those references that point to right are definitely invalid after right is moved.
+                        let mut lNode = alias_map.get(&right).unwrap().clone();
+                        lNode.set_index(left);
+                        alias_map.insert(left, lNode);
+                    },
+                    mir::Operand::Constant(_) => (),
+                }
+            },
+            Rvalue::AddressOf(_, p) => {
+                
+            },
+            Rvalue::Ref(_, _, p) => {
+                let right = resolve_project(p, alias_map);
+                // left is reference to right, so init a new ref node which points to right
+                // only if strict ssa can we insert directly
+                alias_map.insert(left, Node::new_ref(left, right));
+            },
+            Rvalue::Repeat(_, _) => todo!(),
+            Rvalue::ThreadLocalRef(_) => todo!(),
+            Rvalue::Len(_) => todo!(),
+            Rvalue::Cast(_, _, _) => (),
+            Rvalue::Discriminant(_) => todo!(),
+            Rvalue::Aggregate(_, _) => (),
+            Rvalue::ShallowInitBox(_, _) => todo!(),
+            Rvalue::CopyForDeref(_) => todo!(),
+            _ => (),
+        }
+    }
+
 }
 
 // copied from rustc_mir_dataflow::storage::always_storage_live_locals
 // The set of locals in a MIR body that do not have `StorageLive`/`StorageDead` annotations.
 //
 // These locals have fixed storage for the duration of the body.
-use rustc_index::bit_set::BitSet;
+use rustc_index::{bit_set::BitSet, IndexVec};
 use rustc_middle::mir::{self, Local};
 use rustc_target::abi::VariantIdx;
 pub fn always_storage_live_locals(body: &Body<'_>) -> BitSet<Local> {
-    
-
     let mut always_live_locals = BitSet::new_filled(body.local_decls.len());
 
     for block in &*body.basic_blocks {
@@ -271,4 +373,29 @@ pub fn is_lock(ty: &Ty) -> bool{
     // TODO: better logic
     let ty = format!("{:?}", ty);
     return (ty.contains("Mutex") && !ty.contains("MutexGuard")) || ty.contains("Rwlock"); // TODO: RwLock
+}
+
+pub fn resolve_project<'tcx>(p: &Place, alias_map: &FxHashMap<usize, Node<'tcx>>) -> usize {
+    let mut current = p.local.as_usize();
+    for projection in p.projection{
+        match &projection{
+            mir::ProjectionElem::Deref => {
+                let node = alias_map.get(&current).unwrap();
+                match node{
+                    Node::Owned(_) => panic!("You cannot deref an owned variable!"),
+                    Node::Ref(r) => {
+                        current = r.point_to;
+                    },
+                }
+            },
+            mir::ProjectionElem::Field(_, _) => (),
+            mir::ProjectionElem::Index(_) => todo!(),
+            mir::ProjectionElem::ConstantIndex { offset, min_length, from_end } => todo!(),
+            mir::ProjectionElem::Subslice { from, to, from_end } => todo!(),
+            mir::ProjectionElem::Downcast(_, _) => todo!(),
+            mir::ProjectionElem::OpaqueCast(_) => todo!(),
+            mir::ProjectionElem::Subtype(_) => todo!(),
+        }
+    }
+    current
 }

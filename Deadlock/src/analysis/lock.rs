@@ -20,6 +20,12 @@ pub enum Lock{
     RwLock(RwLock),
 }
 
+pub struct LockGuard{
+    pub index: usize,
+    // the guarded lock's index
+    pub lock: usize,
+}
+
 
 impl Mutex {
     pub fn new(name: String) -> Self {

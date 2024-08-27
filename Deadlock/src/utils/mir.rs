@@ -120,12 +120,25 @@ impl<'tcx> Display for Rvalue<'tcx> {
         let mut s = String::new();
         s += EXPLAIN;
         match self {
-            Rvalue::Use( .. ) =>
-                s += "Use",
+            Rvalue::Use( o ) =>{
+                s += "Use";
+                match o{
+                    Operand::Copy(p) => {
+                        s += " Copy";
+                    },
+                    Operand::Move(p) => {
+                        s += " Move";
+                    },
+                    Operand::Constant(_) => (),
+                }
+            },
             Rvalue::Repeat( .. ) =>
                 s += "Repeat",
-            Rvalue::Ref( .. ) =>
-                s += "Ref",
+            Rvalue::Ref(_, _, p ) =>{
+                s += "Ref";
+                s += format!("The type is {:?}", p.projection).as_str();
+            }
+                ,
             Rvalue::ThreadLocalRef( .. ) =>
                 s += "ThreadLocalRef",
             Rvalue::AddressOf( .. ) =>

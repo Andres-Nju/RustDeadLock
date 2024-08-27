@@ -78,7 +78,7 @@ impl Driver {
     fn print_basic(&mut self, context: &mut Context) {
         let tcx = context.tcx;
         let mut show_mir = ShowMir::new(tcx);
-        // let mut call_graph = CallGraph::new(tcx);
+        let mut call_graph = CallGraph::new(tcx);
         // show_mir.start();
         // call_graph.start();
         let mut lock_set_analysis = LockSetAnalysis::new(tcx, call_graph);

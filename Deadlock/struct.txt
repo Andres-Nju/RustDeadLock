@@ -1,0 +1,255 @@
+Show MIR
+DefId(0:7 ~ struct[d272]::{impl#0}::new)
+_0:  @ Level3 
+_1:  @ i32 
+_2:  @ std::sync::Mutex<i32> 
+_3:  @ i32 
+
+[value => _1]
+bb 0 {
+CleanUp: false
+    StorageLive(_2) @ StorageLive
+    StorageLive(_3) @ StorageLive
+    Assign((_3, _1)) @ _3=_1 @ Use
+    _2 = std::sync::Mutex::<i32>::new(move _3) -> [return: bb1, unwind: bb2] @ Call: FnDid: 6372
+}
+bb 1 {
+CleanUp: false
+    StorageDead(_3) @ StorageDead
+    Assign((_0, Level3 { value: move _2 })) @ _0=Level3 { value: move _2 } @ Aggregate
+    StorageDead(_2) @ StorageDead
+    return @ Return
+}
+bb 2 {
+CleanUp: true
+    resume @ UnwindResume
+}
+
+DefId(0:11 ~ struct[d272]::{impl#1}::new)
+_0:  @ Level2 
+_1:  @ i32 
+_2:  @ Level3 
+_3:  @ i32 
+
+[value => _1]
+bb 0 {
+CleanUp: false
+    StorageLive(_2) @ StorageLive
+    StorageLive(_3) @ StorageLive
+    Assign((_3, _1)) @ _3=_1 @ Use
+    _2 = Level3::new(move _3) -> [return: bb1, unwind: bb2] @ Call: FnDid: 7
+}
+bb 1 {
+CleanUp: false
+    StorageDead(_3) @ StorageDead
+    Assign((_0, Level2 { level3: move _2 })) @ _0=Level2 { level3: move _2 } @ Aggregate
+    StorageDead(_2) @ StorageDead
+    return @ Return
+}
+bb 2 {
+CleanUp: true
+    resume @ UnwindResume
+}
+
+DefId(0:15 ~ struct[d272]::{impl#2}::new)
+_0:  @ Level1 
+_1:  @ i32 
+_2:  @ Level2 
+_3:  @ i32 
+
+[value => _1]
+bb 0 {
+CleanUp: false
+    StorageLive(_2) @ StorageLive
+    StorageLive(_3) @ StorageLive
+    Assign((_3, _1)) @ _3=_1 @ Use
+    _2 = Level2::new(move _3) -> [return: bb1, unwind: bb2] @ Call: FnDid: 11
+}
+bb 1 {
+CleanUp: false
+    StorageDead(_3) @ StorageDead
+    Assign((_0, Level1 { level2: move _2 })) @ _0=Level1 { level2: move _2 } @ Aggregate
+    StorageDead(_2) @ StorageDead
+    return @ Return
+}
+bb 2 {
+CleanUp: true
+    resume @ UnwindResume
+}
+
+DefId(0:16 ~ struct[d272]::main)
+_0:  @ () 
+_1:  @ Level1 
+_2:  @ () 
+_3:  @ std::sync::MutexGuard<ReErased, i32> 
+_4:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_5:  @ &ReErased std::sync::Mutex<i32> 
+_6:  @ &ReErased mut i32 
+_7:  @ &ReErased mut std::sync::MutexGuard<ReErased, i32> 
+_8:  @ std::sync::MutexGuard<ReErased, i32> 
+_9:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_10:  @ &ReErased std::sync::Mutex<i32> 
+_11:  @ () 
+_12:  @ () 
+_13:  @ std::fmt::Arguments<ReErased> 
+_14:  @ &ReErased [&ReErased str] 
+_15:  @ &ReErased [&ReErased str; 2_usize] 
+_16:  @ &ReErased [&ReErased str; 2_usize] 
+_17:  @ [&ReErased str; 2_usize] 
+_18:  @ &ReErased [core::fmt::rt::Argument<ReErased>] 
+_19:  @ &ReErased [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_20:  @ &ReErased [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_21:  @ [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_22:  @ core::fmt::rt::Argument<ReErased> 
+_23:  @ &ReErased i32 
+_24:  @ &ReErased i32 
+_25:  @ &ReErased i32 
+_26:  @ &ReErased std::sync::MutexGuard<ReErased, i32> 
+
+[level1 => _1, value => _3, final_value => _8]
+bb 0 {
+CleanUp: false
+    StorageLive(_1) @ StorageLive
+    _1 = Level1::new(const 10_i32) -> [return: bb1, unwind: bb17] @ Call: FnDid: 15
+}
+bb 1 {
+CleanUp: false
+    FakeRead((ForLet(None), _1)) @ FakeRead
+    StorageLive(_2) @ StorageLive
+    StorageLive(_3) @ StorageLive
+    StorageLive(_4) @ StorageLive
+    StorageLive(_5) @ StorageLive
+    Assign((_5, &(((_1.0: Level2).0: Level3).0: std::sync::Mutex<i32>))) @ _5=&(((_1.0: Level2).0: Level3).0: std::sync::Mutex<i32>) @ RefThe type is [Field(0, Level2), Field(0, Level3), Field(0, std::sync::Mutex<i32>)]
+    _4 = std::sync::Mutex::<i32>::lock(move _5) -> [return: bb2, unwind: bb17] @ Call: FnDid: 6375
+}
+bb 2 {
+CleanUp: false
+    StorageDead(_5) @ StorageDead
+    _3 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _4) -> [return: bb3, unwind: bb16] @ Call: FnDid: 9195
+}
+bb 3 {
+CleanUp: false
+    StorageDead(_4) @ StorageDead
+    FakeRead((ForLet(None), _3)) @ FakeRead
+    StorageLive(_6) @ StorageLive
+    StorageLive(_7) @ StorageLive
+    Assign((_7, &mut _3)) @ _7=&mut _3 @ RefThe type is []
+    _6 = <std::sync::MutexGuard<'_, i32> as std::ops::DerefMut>::deref_mut(move _7) -> [return: bb4, unwind: bb15] @ Call: FnDid: 3113
+}
+bb 4 {
+CleanUp: false
+    StorageDead(_7) @ StorageDead
+    Assign(((*_6), const 42_i32)) @ (*_6)=const 42_i32 @ Use
+    StorageDead(_6) @ StorageDead
+    Assign((_2, const ())) @ _2=const () @ Use
+    drop(_3) -> [return: bb5, unwind: bb17] @ Drop
+}
+bb 5 {
+CleanUp: false
+    StorageDead(_3) @ StorageDead
+    StorageDead(_2) @ StorageDead
+    StorageLive(_8) @ StorageLive
+    StorageLive(_9) @ StorageLive
+    StorageLive(_10) @ StorageLive
+    Assign((_10, &(((_1.0: Level2).0: Level3).0: std::sync::Mutex<i32>))) @ _10=&(((_1.0: Level2).0: Level3).0: std::sync::Mutex<i32>) @ RefThe type is [Field(0, Level2), Field(0, Level3), Field(0, std::sync::Mutex<i32>)]
+    _9 = std::sync::Mutex::<i32>::lock(move _10) -> [return: bb6, unwind: bb17] @ Call: FnDid: 6375
+}
+bb 6 {
+CleanUp: false
+    StorageDead(_10) @ StorageDead
+    _8 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _9) -> [return: bb7, unwind: bb14] @ Call: FnDid: 9195
+}
+bb 7 {
+CleanUp: false
+    StorageDead(_9) @ StorageDead
+    FakeRead((ForLet(None), _8)) @ FakeRead
+    StorageLive(_11) @ StorageLive
+    StorageLive(_12) @ StorageLive
+    StorageLive(_13) @ StorageLive
+    StorageLive(_14) @ StorageLive
+    StorageLive(_15) @ StorageLive
+    StorageLive(_16) @ StorageLive
+    StorageLive(_17) @ StorageLive
+    Assign((_17, [const "Final value: ", const "\n"])) @ _17=[const "Final value: ", const "\n"] @ Aggregate
+    Assign((_16, &_17)) @ _16=&_17 @ RefThe type is []
+    Assign((_15, &(*_16))) @ _15=&(*_16) @ RefThe type is [Deref]
+    Assign((_14, move _15 as &[&str] (PointerCoercion(Unsize)))) @ _14=move _15 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    StorageDead(_15) @ StorageDead
+    StorageLive(_18) @ StorageLive
+    StorageLive(_19) @ StorageLive
+    StorageLive(_20) @ StorageLive
+    StorageLive(_21) @ StorageLive
+    StorageLive(_22) @ StorageLive
+    StorageLive(_23) @ StorageLive
+    StorageLive(_24) @ StorageLive
+    StorageLive(_25) @ StorageLive
+    StorageLive(_26) @ StorageLive
+    Assign((_26, &_8)) @ _26=&_8 @ RefThe type is []
+    _25 = <std::sync::MutexGuard<'_, i32> as std::ops::Deref>::deref(move _26) -> [return: bb8, unwind: bb13] @ Call: FnDid: 3101
+}
+bb 8 {
+CleanUp: false
+    StorageDead(_26) @ StorageDead
+    Assign((_24, &(*_25))) @ _24=&(*_25) @ RefThe type is [Deref]
+    Assign((_23, &(*_24))) @ _23=&(*_24) @ RefThe type is [Deref]
+    _22 = core::fmt::rt::Argument::<'_>::new_display::<i32>(move _23) -> [return: bb9, unwind: bb13] @ Call: FnDid: 9786
+}
+bb 9 {
+CleanUp: false
+    StorageDead(_23) @ StorageDead
+    Assign((_21, [move _22])) @ _21=[move _22] @ Aggregate
+    StorageDead(_22) @ StorageDead
+    Assign((_20, &_21)) @ _20=&_21 @ RefThe type is []
+    Assign((_19, &(*_20))) @ _19=&(*_20) @ RefThe type is [Deref]
+    Assign((_18, move _19 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)))) @ _18=move _19 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)) @ Cast
+    StorageDead(_19) @ StorageDead
+    _13 = std::fmt::Arguments::<'_>::new_v1(move _14, move _18) -> [return: bb10, unwind: bb13] @ Call: FnDid: 9866
+}
+bb 10 {
+CleanUp: false
+    StorageDead(_18) @ StorageDead
+    StorageDead(_14) @ StorageDead
+    _12 = std::io::_print(move _13) -> [return: bb11, unwind: bb13] @ Call: FnDid: 3326
+}
+bb 11 {
+CleanUp: false
+    StorageDead(_13) @ StorageDead
+    StorageDead(_25) @ StorageDead
+    StorageDead(_24) @ StorageDead
+    StorageDead(_21) @ StorageDead
+    StorageDead(_20) @ StorageDead
+    StorageDead(_17) @ StorageDead
+    StorageDead(_16) @ StorageDead
+    StorageDead(_12) @ StorageDead
+    Assign((_11, const ())) @ _11=const () @ Use
+    StorageDead(_11) @ StorageDead
+    Assign((_0, const ())) @ _0=const () @ Use
+    drop(_8) -> [return: bb12, unwind: bb17] @ Drop
+}
+bb 12 {
+CleanUp: false
+    StorageDead(_8) @ StorageDead
+    StorageDead(_1) @ StorageDead
+    return @ Return
+}
+bb 13 {
+CleanUp: true
+    drop(_8) -> [return: bb17, unwind terminate(cleanup)] @ Drop
+}
+bb 14 {
+CleanUp: true
+    drop(_9) -> [return: bb17, unwind terminate(cleanup)] @ Drop
+}
+bb 15 {
+CleanUp: true
+    drop(_3) -> [return: bb17, unwind terminate(cleanup)] @ Drop
+}
+bb 16 {
+CleanUp: true
+    drop(_4) -> [return: bb17, unwind terminate(cleanup)] @ Drop
+}
+bb 17 {
+CleanUp: true
+    resume @ UnwindResume
+}
+
