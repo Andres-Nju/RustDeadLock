@@ -1,11 +1,13 @@
-use std::sync::Arc;
+use std::sync::{Mutex, Arc};
 struct A{
-    a: i32,
+    s: Mutex<Box<i32>>,
 }
 fn main(){
-    let mut aa = A{a: 10};
-    aa.a = ttt(100);
-}
-fn ttt(_a: i32) -> i32{
-    _a
+    // _1:  @ std::sync::Arc<std::sync::Mutex<std::boxed::Box<i32, std::alloc::Global>>, std::alloc::Global> 
+    // _2:  @ std::sync::Mutex<std::boxed::Box<i32, std::alloc::Global>> 
+    // _3:  @ std::boxed::Box<i32, std::alloc::Global> 
+    let mutex1 = Arc::new(Mutex::new(Box::new(123)));
+    let a = A{
+        s: Mutex::new(Box::new(123)),
+    };
 }

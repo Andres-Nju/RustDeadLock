@@ -106,6 +106,17 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             }
             // add named owned variables into alias graph first
             // this is because all unnamed temps, or named references are derived from them
+            // FIXME: 应该是最内层的内容，后续所有的内容都将指向它
+            // 随后所有的deref操作都是返回的指向的内容的引用
+            // 比如对Arc<Mutex>(记作变量a)做deref，首先调用的是&Arc<Mutex>.deref()
+            // 即(&a).deref -> &Mutex, 而alias图中有a -> Mutex,
+            // 综合起来就是有 &a -> a -> Mutex, deref之后图的样子应该是多出来&Mutex -> Mutex：
+            // 即                         ^
+            //                            |
+            //                            |
+            //                         &Mutex
+            // _1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+            // _2:  @ std::sync::Mutex<i32> 
             if self.var_debug_info.contains_key(&index) && !ty.is_ref(){
                 alias_map.insert(index, Node::new_owned(index, ty));
             }
