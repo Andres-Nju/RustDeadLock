@@ -80,7 +80,7 @@ impl Driver {
         let mut show_mir = ShowMir::new(tcx);
         let mut call_graph = CallGraph::new(tcx);
         // show_mir.start();
-        // call_graph.start();
+        call_graph.start();
         let mut lock_set_analysis = LockSetAnalysis::new(tcx, call_graph);
         lock_set_analysis.run_analysis();
         // for (did, name) in &context.all_funcs {

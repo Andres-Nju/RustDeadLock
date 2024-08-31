@@ -47,6 +47,8 @@ impl<'tcx> CallGraph<'tcx>{
         }
         self.topo_sort();
         println!("Finish callgraph analysis");
+        self.print_topo();
+        self.topo.reverse();
     }
 
     pub fn find_callees(&mut self,def_id: DefId) {
@@ -55,7 +57,7 @@ impl<'tcx> CallGraph<'tcx>{
             let body = tcx.optimized_mir(def_id);
             for bb in body.basic_blocks.iter() {
                 match &bb.terminator().kind {
-                    TerminatorKind::Call{func, ..} => {
+                    TerminatorKind::Call{func, args, ..} => {
                         if let Operand::Constant(func_constant) = func{
                             if let ty::FnDef(ref callee_def_id, _) = func_constant.const_.ty().kind() {
 				                self.edges.insert((def_id,*callee_def_id));

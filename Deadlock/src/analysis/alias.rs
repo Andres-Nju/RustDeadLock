@@ -1,48 +1,93 @@
-use rustc_middle::ty::Ty;
+use std::{
+    cell::RefCell, hash::{Hash, Hasher}, rc::Rc
+};
 
-#[derive(Debug, Clone)]
-pub struct Owned<'tcx>{
-    pub index: usize,
-    pub ty: Ty<'tcx>,
+use rustc_hash::FxHashSet;
+
+
+#[derive(Debug)]
+pub struct AliasSet {
+    variables: RefCell<FxHashSet<Rc<VariableNode>>>,  
 }
 
-#[derive(Debug, Clone)]
-pub struct Ref{
-    pub index: usize,
-    pub point_to: usize,
+/// a chain list form:
+/// e.g. for the sample code
+/// fn main{
+///     let a = ...;
+///     let p1 = &a;
+///     let p2 = &p1;
+/// }
+/// the alias relationship:
+/// node a's AliasSet: a; a points to None
+/// node p1's AliasSet: p1, p1 points to a
+/// node p2's AliasSet: p2, p2 points to p1
+#[derive(Debug)]
+pub struct PointsTo {
+    /// the reference's correspond node
+    base: Rc<VariableNode>,      
+    /// the node it points to                 
+    next: Option<Rc<PointsTo>>,             
 }
 
-#[derive(Debug, Clone)]
-pub enum Node<'tcx>{
-    Owned(Owned<'tcx>),
-    Ref(Ref),
+/// model of all the variables and temps in mir
+#[derive(Debug)]
+pub struct VariableNode {
+    /// its local index
+    index: usize,       
+    /// its alias set, containing all the alias nodes of this node                      
+    alias_set: Rc<AliasSet>,            
+    /// it can be a pointer or reference, if so, record the referent
+    /// FIXME: now we just assume each reference may at most point to one referent
+    points_to: Option<Rc<PointsTo>>,      
 }
 
-impl<'tcx> Owned<'tcx> {
-    pub fn new(index: usize, ty: Ty<'tcx>) -> Self {
-        Owned { index, ty }
+
+
+impl PartialEq for VariableNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
     }
 }
 
-impl Ref {
-    pub fn new(index: usize, point_to: usize) -> Self {
-        Ref { index, point_to }
+impl Eq for VariableNode {}
+
+impl Hash for VariableNode {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.index.hash(state);
     }
 }
 
-impl<'tcx> Node<'tcx> {
-    pub fn new_owned(index: usize, ty: Ty<'tcx>) -> Self {
-        Node::Owned(Owned::new(index, ty))
+impl AliasSet {
+    pub fn new() -> Rc<Self> {
+        Rc::new(AliasSet {
+            variables: RefCell::new(FxHashSet::default()),
+        })
     }
 
-    pub fn new_ref(index: usize, point_to: usize) -> Self {
-        Node::Ref(Ref::new(index, point_to))
+    fn add_variable(&self, var: Rc<VariableNode>) {
+        self.variables.borrow_mut().insert(var);
     }
 
-    pub fn set_index(&mut self, index: usize){
-        match self{
-            Node::Owned(o) => o.index = index,
-            Node::Ref(r) => r.index = index,
+    fn merge(self: &Rc<Self>, other: Rc<AliasSet>) {
+        let mut self_vars = self.variables.borrow_mut();
+        let mut other_vars = other.variables.borrow_mut();
+
+        for mut var in other_vars.drain() {
+            self_vars.insert(Rc::clone(&var));
+            var.alias_set = Rc::clone(self); 
         }
+    }
+
+}
+
+impl VariableNode {
+    pub fn new(index: usize, alias_set: Rc<AliasSet>, points_to: Option<Rc<PointsTo>>) -> Rc<Self> {
+        let var = Rc::new(VariableNode {
+            index,
+            alias_set,
+            points_to,
+        });
+        var.alias_set.add_variable(Rc::clone(&var));
+        var
     }
 }
