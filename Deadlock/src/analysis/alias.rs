@@ -5,42 +5,28 @@ use std::{
 use rustc_hash::FxHashSet;
 
 
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+pub struct LockObject {
+    id: usize,
+}
+
+impl LockObject {
+    pub fn new(id: usize) -> Rc<Self> {
+        Rc::new(LockObject { id })
+    }
+}
+
 #[derive(Debug)]
 pub struct AliasSet {
     variables: RefCell<FxHashSet<Rc<VariableNode>>>,  
 }
 
-/// a chain list form:
-/// e.g. for the sample code
-/// fn main{
-///     let a = ...;
-///     let p1 = &a;
-///     let p2 = &p1;
-/// }
-/// the alias relationship:
-/// node a's AliasSet: a; a points to None
-/// node p1's AliasSet: p1, p1 points to a
-/// node p2's AliasSet: p2, p2 points to p1
-#[derive(Debug)]
-pub struct PointsTo {
-    /// the reference's correspond node
-    base: Rc<VariableNode>,      
-    /// the node it points to                 
-    next: Option<Rc<PointsTo>>,             
-}
-
-/// model of all the variables and temps in mir
 #[derive(Debug)]
 pub struct VariableNode {
-    /// its local index
-    index: usize,       
-    /// its alias set, containing all the alias nodes of this node                      
-    alias_set: Rc<AliasSet>,            
-    /// it can be a pointer or reference, if so, record the referent
-    /// FIXME: now we just assume each reference may at most point to one referent
-    points_to: Option<Rc<PointsTo>>,      
+    index: usize,
+    alias_set: Rc<AliasSet>, 
+    possible_locks: Rc<RefCell<FxHashSet<Rc<LockObject>>>>,
 }
-
 
 
 impl PartialEq for VariableNode {
@@ -64,30 +50,42 @@ impl AliasSet {
         })
     }
 
-    fn add_variable(&self, var: Rc<VariableNode>) {
+    pub fn add_variable(&self, var: Rc<VariableNode>) {
         self.variables.borrow_mut().insert(var);
     }
 
-    fn merge(self: &Rc<Self>, other: Rc<AliasSet>) {
+    pub fn merge(self: &Rc<Self>, other: Rc<AliasSet>) {
         let mut self_vars = self.variables.borrow_mut();
-        let mut other_vars = other.variables.borrow_mut();
+        let other_vars = other.variables.borrow();
 
-        for mut var in other_vars.drain() {
+        for var in other_vars.iter() {
             self_vars.insert(Rc::clone(&var));
-            var.alias_set = Rc::clone(self); 
         }
     }
-
 }
 
 impl VariableNode {
-    pub fn new(index: usize, alias_set: Rc<AliasSet>, points_to: Option<Rc<PointsTo>>) -> Rc<Self> {
-        let var = Rc::new(VariableNode {
+    pub fn new(index: usize) -> Rc<Self> {
+        Rc::new(VariableNode {
             index,
-            alias_set,
-            points_to,
-        });
-        var.alias_set.add_variable(Rc::clone(&var));
-        var
+            alias_set: AliasSet::new(),
+            possible_locks: Rc::new(RefCell::new(FxHashSet::default())),
+        })
+    }
+
+    pub fn merge_alias_set(&self, other: Rc<VariableNode>){
+        self.alias_set.merge(other.alias_set);
+    }
+
+    pub fn strong_update_possible_locks(&mut self, other: Rc<VariableNode>) {
+        self.possible_locks = other.possible_locks.clone();
+    }
+
+    pub fn add_possible_lock(&self, lock: Rc<LockObject>) {
+        self.possible_locks.borrow_mut().insert(lock);
+    }
+
+    pub fn get_possible_locks(&self) -> Vec<Rc<LockObject>> {
+        self.possible_locks.borrow().iter().cloned().collect()
     }
 }
