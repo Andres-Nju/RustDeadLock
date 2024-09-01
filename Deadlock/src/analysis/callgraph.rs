@@ -117,6 +117,7 @@ impl<'tcx> CallGraph<'tcx>{
         for f in &self.topo{
             println!("{} ", self.tcx.def_path_str(f));
         }
+        println!();
     }
 }
 

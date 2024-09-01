@@ -1,9 +1,10 @@
+use std::sync::Mutex;
 fn main(){
-    let a = String::from("123");
-    let b = &a;
-    tt(b);
+    let a = Mutex::new(123);
+    // println!("{:?}", a);
+    let g = a.lock().unwrap();
 }
 
-fn tt(b: &String){
-    let c = b.clone();
+fn tt(b: &Mutex<i32>){
+    
 }

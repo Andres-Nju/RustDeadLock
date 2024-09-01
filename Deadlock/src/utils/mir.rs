@@ -256,7 +256,8 @@ impl<'tcx> ShowMir<'tcx>{
        	for each_mir in mir_keys {
             let def_id = each_mir.to_def_id();
             // let body = self.tcx.instance_mir(ty::InstanceDef::Item(def_id));
-            let body = &self.tcx.mir_built(def_id.as_local().unwrap()).steal();
+            // let body = &self.tcx.mir_built(def_id.as_local().unwrap()).steal();
+            let body = self.tcx.optimized_mir(def_id);
             display_mir(def_id, body);
 	    }
     }

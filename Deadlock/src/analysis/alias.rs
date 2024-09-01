@@ -24,7 +24,7 @@ pub struct AliasSet {
 #[derive(Debug)]
 pub struct VariableNode {
     index: usize,
-    alias_set: Rc<AliasSet>, 
+    pub alias_set: Rc<AliasSet>, 
     possible_locks: Rc<RefCell<FxHashSet<Rc<LockObject>>>>,
 }
 
@@ -54,7 +54,7 @@ impl AliasSet {
         self.variables.borrow_mut().insert(var);
     }
 
-    pub fn merge(self: &Rc<Self>, other: Rc<AliasSet>) {
+    pub fn merge(self: &Rc<Self>, other: &Rc<AliasSet>) {
         let mut self_vars = self.variables.borrow_mut();
         let other_vars = other.variables.borrow();
 
@@ -73,12 +73,12 @@ impl VariableNode {
         })
     }
 
-    pub fn merge_alias_set(&self, other: Rc<VariableNode>){
-        self.alias_set.merge(other.alias_set);
+    pub fn merge_alias_set(&self, other: &Rc<VariableNode>){
+        self.alias_set.merge(&other.alias_set);
     }
 
-    pub fn strong_update_possible_locks(&mut self, other: Rc<VariableNode>) {
-        self.possible_locks = other.possible_locks.clone();
+    pub fn strong_update_possible_locks(&self, other: &Rc<VariableNode>) {
+        *self.possible_locks.borrow_mut() = other.possible_locks.borrow().clone();
     }
 
     pub fn add_possible_lock(&self, lock: Rc<LockObject>) {
