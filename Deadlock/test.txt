@@ -1,29 +1,113 @@
+Show MIR
 DefId(0:4 ~ test[fc21]::main)
 _0:  @ () 
 _1:  @ std::sync::Mutex<i32> 
-_2:  @ std::sync::MutexGuard<ReErased, i32> 
-_3:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
-_4:  @ &ReErased std::sync::Mutex<i32> 
+_2:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_3:  @ &ReErased std::sync::Mutex<i32> 
+_4:  @ isize 
+_5:  @ std::sync::MutexGuard<ReErased, i32> 
+_6:  @ std::sync::MutexGuard<ReErased, i32> 
+_7:  @ () 
+_8:  @ &ReErased std::sync::Mutex<i32> 
+_9:  @ bool 
+_10:  @ isize 
+_11:  @ isize 
 
-[a => _1, g => _2]
+[a => _1, g => _2, w => _5, kk => _6]
 bb 0 {
 CleanUp: false
+    Assign((_9, const false)) @ _9=const false @ Use
     _1 = std::sync::Mutex::<i32>::new(const 123_i32) -> [return: bb1, unwind continue] @ Call: FnDid: 6372
 }
 bb 1 {
 CleanUp: false
-    Assign((_4, &_1)) @ _4=&_1 @ RefThe type is []
-    _3 = std::sync::Mutex::<i32>::lock(move _4) -> [return: bb2, unwind continue] @ Call: FnDid: 6375
+    Assign((_3, &_1)) @ _3=&_1 @ RefThe type is []
+    Assign((_9, const true)) @ _9=const true @ Use
+    _2 = std::sync::Mutex::<i32>::lock(move _3) -> [return: bb2, unwind continue] @ Call: FnDid: 6375
 }
 bb 2 {
 CleanUp: false
-    _2 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _3) -> [return: bb3, unwind continue] @ Call: FnDid: 9195
+    Assign((_4, discriminant(_2))) @ _4=discriminant(_2) @ Discriminant
+    switchInt(move _4) -> [0: bb3, otherwise: bb4] @ SwitchInt
 }
 bb 3 {
 CleanUp: false
-    drop(_2) -> [return: bb4, unwind continue] @ Drop
+    Assign((_9, const false)) @ _9=const false @ Use
+    Assign((_5, move ((_2 as Ok).0: std::sync::MutexGuard<'_, i32>))) @ _5=move ((_2 as Ok).0: std::sync::MutexGuard<'_, i32>) @ Use Move
+    Assign((_6, move _5)) @ _6=move _5 @ Use Move
+    drop(_6) -> [return: bb4, unwind: bb14] @ Drop
 }
 bb 4 {
 CleanUp: false
+    Assign((_8, &_1)) @ _8=&_1 @ RefThe type is []
+    _7 = tt(_8) -> [return: bb5, unwind: bb14] @ Call: FnDid: 5
+}
+bb 5 {
+CleanUp: false
+    Assign((_10, discriminant(_2))) @ _10=discriminant(_2) @ Discriminant
+    switchInt(move _10) -> [0: bb8, otherwise: bb10] @ SwitchInt
+}
+bb 6 {
+CleanUp: true
+    resume @ UnwindResume
+}
+bb 7 {
+CleanUp: false
+    Assign((_9, const false)) @ _9=const false @ Use
     return @ Return
 }
+bb 8 {
+CleanUp: false
+    switchInt(_9) -> [0: bb7, otherwise: bb9] @ SwitchInt
+}
+bb 9 {
+CleanUp: false
+    drop(((_2 as Ok).0: std::sync::MutexGuard<'_, i32>)) -> [return: bb7, unwind continue] @ Drop
+}
+bb 10 {
+CleanUp: false
+    drop(_2) -> [return: bb7, unwind continue] @ Drop
+}
+bb 11 {
+CleanUp: true
+    switchInt(_9) -> [0: bb6, otherwise: bb12] @ SwitchInt
+}
+bb 12 {
+CleanUp: true
+    drop(((_2 as Ok).0: std::sync::MutexGuard<'_, i32>)) -> [return: bb6, unwind terminate(cleanup)] @ Drop
+}
+bb 13 {
+CleanUp: true
+    drop(_2) -> [return: bb6, unwind terminate(cleanup)] @ Drop
+}
+bb 14 {
+CleanUp: true
+    Assign((_11, discriminant(_2))) @ _11=discriminant(_2) @ Discriminant
+    switchInt(move _11) -> [0: bb11, otherwise: bb13] @ SwitchInt
+}
+
+DefId(0:5 ~ test[fc21]::tt)
+_0:  @ () 
+_1:  @ &ReErased std::sync::Mutex<i32> 
+_2:  @ () 
+
+[b => _1]
+bb 0 {
+CleanUp: false
+    _2 = tt2(_1) -> [return: bb1, unwind continue] @ Call: FnDid: 6
+}
+bb 1 {
+CleanUp: false
+    return @ Return
+}
+
+DefId(0:6 ~ test[fc21]::tt2)
+_0:  @ () 
+_1:  @ &ReErased std::sync::Mutex<i32> 
+
+[b => _1]
+bb 0 {
+CleanUp: false
+    return @ Return
+}
+

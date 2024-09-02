@@ -1,16 +1,15 @@
-use rustc_middle::ty::Ty;
-use rustc_hash::FxHashSet;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::hash::{Hash, Hasher};
+use rustc_hash::{FxHashMap, FxHashSet};
+
+use super::alias::LockObject;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct Mutex{
-    pub name: String,
-    pub live: bool,
-}
+pub struct Mutex {}
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct RwLock{
-    pub name: String,
-    pub live: bool,
     pub is_write: bool,
 }
 
@@ -20,76 +19,42 @@ pub enum Lock{
     RwLock(RwLock),
 }
 
+#[derive(Debug, Clone)]
 pub struct LockGuard{
-    pub index: usize,
-    // the guarded lock's index
-    pub lock: usize,
+    pub possible_locks: Rc<RefCell<FxHashSet<Rc<LockObject>>>>,
 }
 
-
 impl Mutex {
-    pub fn new(name: String) -> Self {
-        Self {
-            name,
-            live: false, 
-        }
-    }
-
-    pub fn set_live(&mut self){
-        self.live = true;
-    }
-
-    pub fn set_dead(&mut self){
-        self.live = false;
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
 impl RwLock {
-    pub fn new(name: String) -> Self {
+    pub fn new(is_write: bool) -> Self {
         Self {
-            name,
-            live: false,
-            is_write: false, 
+            is_write
         }
     }
 
-    pub fn set_live(&mut self){
-        self.live = true;
-    }
-
-    pub fn set_dead(&mut self){
-        self.live = false;
-    }
 }
 
 impl Lock{
-    pub fn new(name: String, ty: &Ty) -> Self{
-        
-        let ty = format!("{:?}", ty);
-        if ty.contains("Mutex") && !ty.contains("MutexGuard"){
-            Lock::Mutex(Mutex::new(name))
-        }
-        else if ty.contains("RwLock"){
-            Lock::RwLock(RwLock::new(name))
-        }
-        else {
-            panic!("Must be a Mutex or RwLock")
-        }
+    pub fn new_mutex() -> Self{
+        Lock::Mutex(Mutex::new())
     }
 
-    pub fn set_live(&mut self){
-        match self{
-            Lock::Mutex(lock) => { lock.set_live(); },
-            Lock::RwLock(lock) => { lock.set_live(); },
-        }
-    }
-
-    pub fn set_dead(&mut self){
-        match self{
-            Lock::Mutex(lock) => { lock.set_dead(); },
-            Lock::RwLock(lock) => { lock.set_dead(); },
-        }
+    pub fn new_rwlock(is_write: bool) -> Self{
+        Lock::RwLock(RwLock::new(is_write))
     }
 }
 
-pub type LockSetFact = FxHashSet<Lock>;
+pub type LockSetFact = FxHashMap<usize, LockGuard>;
+
+impl LockGuard{
+    pub fn new(possible_locks: Rc<RefCell<FxHashSet<Rc<LockObject>>>>) -> Self {
+        LockGuard{
+            possible_locks,
+        }
+    }
+}

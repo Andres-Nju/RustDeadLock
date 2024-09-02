@@ -7,7 +7,7 @@ use rustc_hash::FxHashSet;
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct LockObject {
-    id: usize,
+    pub id: usize,
 }
 
 impl LockObject {
@@ -18,12 +18,12 @@ impl LockObject {
 
 #[derive(Debug)]
 pub struct AliasSet {
-    variables: RefCell<FxHashSet<Rc<VariableNode>>>,  
+    pub variables: RefCell<FxHashSet<Rc<VariableNode>>>,  
 }
 
 #[derive(Debug)]
 pub struct VariableNode {
-    index: usize,
+    pub index: usize,
     pub alias_set: Rc<AliasSet>, 
     possible_locks: Rc<RefCell<FxHashSet<Rc<LockObject>>>>,
 }
@@ -85,7 +85,7 @@ impl VariableNode {
         self.possible_locks.borrow_mut().insert(lock);
     }
 
-    pub fn get_possible_locks(&self) -> Vec<Rc<LockObject>> {
-        self.possible_locks.borrow().iter().cloned().collect()
+    pub fn get_possible_locks(&self) -> Rc<RefCell<FxHashSet<Rc<LockObject>>>> {
+        self.possible_locks.clone()
     }
 }
