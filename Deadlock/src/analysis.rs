@@ -428,6 +428,9 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                         // e.g., _2 = move _1 (_1 is a lock guard),
                         // replace _1 with _2 in the lock fact
                         // 考虑一下！
+                        // 对于分支的情况，比如true分支中lock guard _9 = move _3, false中_9 = move _6
+                        // 流非敏感的强更新会直接漏掉一种情况
+                        // 还有一种解决方案：在这里不用强更新锁集中的index信息，而是修改drop的处理逻辑，将遍历drop的alias集合，然后从锁集中删掉所有出现的guard
                         let right = resolve_project(p);
                         let right_var = alias_map.get(&right).unwrap();
                         let left_var = VariableNode::new(left);
