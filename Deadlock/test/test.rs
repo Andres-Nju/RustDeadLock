@@ -2,9 +2,11 @@ use std::sync::Mutex;
 fn main(){
     let a = Mutex::new(123);
     // println!("{:?}", a);
-    let g = a.lock().unwrap();
-    let b  = String::from("123");
-    tt(&a);
+    let b = Mutex::new(24);
+    let a1 = a.lock().unwrap();
+    let b1 = b.lock().unwrap();
+    let c = a1;
+    println!("{:?}", c);
 }
 
 fn tt(b: &Mutex<i32>){

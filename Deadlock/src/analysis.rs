@@ -253,10 +253,13 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                 // it must point to one of the args
                                 let def_path = self.tcx.def_path(fn_id.clone());
                                 // println!("{:?}", def_path);
+                                let left = resolve_project(&destination);
                                 if let DefPathData::ValueNs(name) = &def_path.data[def_path.data.len() - 1].data{
                                     if self.tcx.def_path_str(fn_id.clone()).contains("sync::Mutex") && name.as_str() == "new"{
-                                        let left = resolve_project(&destination);
                                         assert_eq!(1, args.len());
+                                        if !is_lock(&self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(left)].ty){
+                                            return;
+                                        }
                                         match &args[0]{
                                             mir::Operand::Copy(_) => {
                                                 panic!("should not go to this branch!");
@@ -272,6 +275,9 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                     }
                                     else if name.as_str() == "deref"{
                                         assert_eq!(1, args.len());
+                                        if !is_lock(&self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(left)].ty){
+                                            return;
+                                        }
                                         match &args[0]{
                                             // must be move _*
                                             mir::Operand::Copy(_) => todo!(),
@@ -291,12 +297,15 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                     }
                                     else if name.as_str() == "unwrap"{ // just update the arg with destination
                                         assert_eq!(1, args.len());
+                                        if !is_lock(&self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(left)].ty){
+                                            return;
+                                        }
                                         match &args[0]{
                                             // must be move _*
                                             mir::Operand::Copy(_) => todo!(),
                                             mir::Operand::Constant(_) => todo!(),
                                             mir::Operand::Move(p) => {
-                                                // like move assign, replace the old lock with new lock
+                                                // like move assign, replace the old guard with new guard
                                                 let right = resolve_project(p);
                                                 let left = resolve_project(destination);
                                                 let lock_fact = self.lock_set_facts.get_mut(&(def_id.clone(), bb_index)).unwrap();
@@ -307,6 +316,11 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 else {
                                                     panic!("Can not find any lock guard of index {:?}", right);
                                                 }
+                                                // update alias map
+                                                let left_var = VariableNode::new(left);
+                                                let right_var  = alias_map.get(&right).unwrap();
+                                                left_var.strong_update_possible_locks(right_var);
+                                                alias_map.insert(left, left_var);
                                             },
                                         }
                                     } 
@@ -322,7 +336,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                             mir::Operand::Copy(_) => todo!(),
                                             mir::Operand::Constant(_) => todo!(),
                                             mir::Operand::Move(p) => {
-                                                // right is &a
                                                 let right =  resolve_project(p);
                                                 let right_var  = alias_map.get(&right).unwrap();
                                                 
@@ -334,12 +347,9 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 fact.insert(left, LockGuard::new(right_var.get_possible_locks()));
                                                 
                                                 // update alias_map
-                                                left_var.merge_alias_set(right_var);
+                                                // left_var.merge_alias_set(right_var);
                                                 left_var.strong_update_possible_locks(right_var);
                                                 alias_map.insert(left, left_var);
-
-                                                
-
                                             },
                                         }
                                     }
@@ -385,7 +395,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         match &statement.kind{
             rustc_middle::mir::StatementKind::Assign(ref assign) => {
                 let left = resolve_project(&assign.0);
-                if is_lock(&decls[Local::from_usize(left)].ty){
+                if is_lock(&decls[Local::from_usize(left)].ty) {
                     self.visit_assign(&def_id, &assign.0, &assign.1);
                 }
             },
@@ -412,17 +422,19 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         match rhs{
             Rvalue::Use(op) => {
                 match op{
-                    mir::Operand::Copy(p) |
+                    mir::Operand::Copy(p) => panic!("Mutex-related variables cannot be copied!"),
                     mir::Operand::Move(p) => {
-                        // if a lock guard is moved, update it in the lock fact
+                        // FIXME: if a lock guard is moved, update it in the lock fact
                         // e.g., _2 = move _1 (_1 is a lock guard),
                         // replace _1 with _2 in the lock fact
+                        // 考虑一下！
                         let right = resolve_project(p);
                         let right_var = alias_map.get(&right).unwrap();
                         let left_var = VariableNode::new(left);
                         left_var.merge_alias_set(right_var);
                         left_var.alias_set.add_variable(right_var.clone());
                         left_var.strong_update_possible_locks(right_var);
+                        // FIXME: 这里要看是不是left第一次插入alias map，如果是，就直接插入，如果不是，应该和原来的left合并一下再写回去
                         alias_map.insert(left, left_var);
                     },
                     mir::Operand::Constant(_) => panic!("Mutex should not be constant!"),
