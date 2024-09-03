@@ -1,27 +1,46 @@
 use std::{
     cell::RefCell, hash::{Hash, Hasher}, rc::Rc
 };
-
+use std::fmt;
 use rustc_hash::FxHashSet;
+use rustc_hir::def_id::DefId;
 
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct LockObject {
+    pub def_id: DefId,
     pub id: usize,
 }
 
 impl LockObject {
-    pub fn new(id: usize) -> Rc<Self> {
-        Rc::new(LockObject { id })
+    pub fn new(def_id: DefId, id: usize) -> Rc<Self> {
+        Rc::new(LockObject { def_id, id })
     }
 }
 
-#[derive(Debug)]
+impl fmt::Debug for AliasSet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let indices: Vec<_> = self.variables.borrow().iter().map(|node| node.index).collect();
+        f.debug_struct("AliasSet")
+         .field("variables", &indices)
+         .finish()
+    }
+}
+
 pub struct AliasSet {
     pub variables: RefCell<FxHashSet<Rc<VariableNode>>>,  
 }
 
-#[derive(Debug)]
+impl fmt::Debug for VariableNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let lock_ids: Vec<_> = self.possible_locks.borrow().iter().map(|lock| (lock.def_id, lock.id)).collect();
+        f.debug_struct("VariableNode")
+         .field("index", &self.index)
+         .field("alias_set", &self.alias_set)
+         .field("possible_locks", &lock_ids)
+         .finish()
+    }
+}
 pub struct VariableNode {
     pub index: usize,
     pub alias_set: Rc<AliasSet>, 
@@ -66,11 +85,13 @@ impl AliasSet {
 
 impl VariableNode {
     pub fn new(index: usize) -> Rc<Self> {
-        Rc::new(VariableNode {
+        let node = Rc::new(VariableNode {
             index,
             alias_set: AliasSet::new(),
             possible_locks: Rc::new(RefCell::new(FxHashSet::default())),
-        })
+        });
+        node.alias_set.add_variable(node.clone());
+        node
     }
 
     pub fn merge_alias_set(&self, other: &Rc<VariableNode>){

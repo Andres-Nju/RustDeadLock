@@ -1,9 +1,10 @@
 use std::{fmt::format, usize, rc::Rc};
 
+use itertools::Itertools;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use callgraph::CallGraph;
-use rustc_hir::{def_id::DefId, definitions::DefPathData};
+use rustc_hir::{def_id::DefId, definitions::{DefPath, DefPathData}};
 use rustc_middle::{
     mir::{BasicBlock, BasicBlockData, BasicBlocks, HasLocalDecls, LocalDecls, Place, Rvalue, Successors, TerminatorKind, VarDebugInfoContents}, 
     ty::{self, Ty, TyCtxt, TyKind}
@@ -85,8 +86,12 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         println!("Alias_flow_graph: ");
         for item in self.alias_flow_graph.iter(){
             println!("{:?}", item.0);
-            for i in item.1{
-                println!("{:?}", i);
+            let mut keys = item.1.keys().collect_vec();
+            keys.sort();
+            for key in keys{
+                if let Some(value) = item.1.get(key) {
+                    println!("{:?}: {:?}", key, value);
+                }
             }
         }
         println!();
@@ -154,6 +159,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         
         let mut work_list = vec![0];
         while !work_list.is_empty(){
+            println!("{:?}", work_list);
             let current_bb_index = work_list.pop().expect("Elements in non-empty work_list should always be valid!");
             // println!("{:?}", self.alias_flow_graph[&def_id]);
             println!("now analysis bb {}", current_bb_index);
@@ -252,50 +258,92 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                 // 2. the destination is a reference =>
                                 // it must point to one of the args
                                 let def_path = self.tcx.def_path(fn_id.clone());
-                                // println!("{:?}", def_path);
+                                let def_path_str = self.tcx.def_path_str(fn_id);
                                 let left = resolve_project(&destination);
                                 if let DefPathData::ValueNs(name) = &def_path.data[def_path.data.len() - 1].data{
-                                    if self.tcx.def_path_str(fn_id.clone()).contains("sync::Mutex") && name.as_str() == "new"{
-                                        assert_eq!(1, args.len());
-                                        if !is_lock(&self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(left)].ty){
-                                            return;
-                                        }
-                                        match &args[0]{
-                                            mir::Operand::Copy(_) => {
-                                                panic!("should not go to this branch!");
+                                    if is_mutex_method(&def_path_str){
+                                        if name.as_str() == "new"{
+                                            assert_eq!(1, args.len());
+                                            match &args[0]{
+                                                mir::Operand::Copy(_) => {
+                                                    panic!("should not go to this branch!");
+                                                }
+                                                mir::Operand::Constant(_) |
+                                                mir::Operand::Move(_) => {
+                                                    let lock_object = LockObject::new(def_id.clone(), left);
+                                                    let left_var = VariableNode::new(left);
+                                                    left_var.add_possible_lock(lock_object);
+                                                    alias_map.insert(left, left_var);
+                                                },
                                             }
-                                            mir::Operand::Constant(_) |
-                                            mir::Operand::Move(_) => {
-                                                let lock_object = LockObject::new(left);
-                                                let left_var = VariableNode::new(left);
-                                                left_var.add_possible_lock(lock_object);
-                                                alias_map.insert(left, left_var);
-                                            },
+                                        }
+                                        //TODO: Clone?
+                                        else if name.as_str() == "lock"{
+                                            // _1 = std::sync::Mutex::<T>::lock(move _2)
+                                            assert_eq!(1, args.len());
+                                            match &args[0]{
+                                                // must be move _*
+                                                mir::Operand::Copy(_) => todo!(),
+                                                mir::Operand::Constant(_) => todo!(),
+                                                mir::Operand::Move(p) => {
+                                                    let right =  resolve_project(p);
+                                                    let right_var  = alias_map.get(&right).unwrap();
+                                                    
+                                                    let left = resolve_project(&destination);
+                                                    let left_var = VariableNode::new(left);
+
+                                                    // update the lock set facts
+                                                    let fact = self.lock_set_facts.get_mut(&(def_id.clone(), bb_index)).unwrap();
+                                                    fact.insert(left, LockGuard::new(right_var.get_possible_locks()));
+                                                    
+                                                    // update alias_map
+                                                    // left_var.merge_alias_set(right_var);
+                                                    left_var.strong_update_possible_locks(right_var);
+                                                    alias_map.insert(left, left_var);
+                                                },
+                                            }
                                         }
                                     }
-                                    else if name.as_str() == "deref"{
-                                        assert_eq!(1, args.len());
-                                        if !is_lock(&self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(left)].ty){
-                                            return;
+                                    else if is_smart_pointer(&def_path_str){
+                                        if name.as_str() == "new"{
+                                            // the same as ref assign
+                                            assert_eq!(1, args.len());
+                                            match &args[0]{
+                                                mir::Operand::Constant(_) |
+                                                mir::Operand::Copy(_) => {
+                                                    panic!("should not go to this branch!");
+                                                }
+                                                mir::Operand::Move(p) => {
+                                                    let right = resolve_project(p);
+                                                    let right_var = alias_map.get(&right).unwrap();
+                                                    let left_var = VariableNode::new(left);
+                                                    left_var.merge_alias_set(right_var);
+                                                    left_var.strong_update_possible_locks(right_var);
+                                                    alias_map.insert(left, left_var);
+                                                },
+                                            }
                                         }
-                                        match &args[0]{
-                                            // must be move _*
-                                            mir::Operand::Copy(_) => todo!(),
-                                            mir::Operand::Constant(_) => todo!(),
-                                            mir::Operand::Move(p) => {
-                                                // right is &a
-                                                let r =  resolve_project(p);
-                                                let right  = alias_map.get(&r).unwrap();
-                                                let left = resolve_project(&destination);
-                                                let left_var = VariableNode::new(left);
-                                                left_var.alias_set.add_variable(right.clone());
-                                                left_var.merge_alias_set(right);
-                                                left_var.strong_update_possible_locks(right);
-                                                alias_map.insert(left, left_var);
-                                            },
+                                        if name.as_str() == "deref"{
+                                            assert_eq!(1, args.len());
+                                            match &args[0]{
+                                                // must be move _*
+                                                mir::Operand::Copy(_) => todo!(),
+                                                mir::Operand::Constant(_) => todo!(),
+                                                mir::Operand::Move(p) => {
+                                                    // right is &a
+                                                    let r =  resolve_project(p);
+                                                    let right  = alias_map.get(&r).unwrap();
+                                                    let left = resolve_project(&destination);
+                                                    let left_var = VariableNode::new(left);
+                                                    left_var.merge_alias_set(right);
+                                                    left_var.strong_update_possible_locks(right);
+                                                    alias_map.insert(left, left_var);
+                                                },
+                                            }
                                         }
                                     }
                                     else if name.as_str() == "unwrap"{ // just update the arg with destination
+                                        // unwrap and lock all not merge the alias of right to left
                                         assert_eq!(1, args.len());
                                         if !is_lock(&self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(left)].ty){
                                             return;
@@ -324,35 +372,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                             },
                                         }
                                     } 
-                                    
-                                    
-                                    //TODO: Clone?
-                                    else if name.as_str() == "lock"{
-                                        // _1 = std::sync::Mutex::<T>::lock(move _2)
-                                        assert_eq!(1, args.len());
-                                        assert_eq!(1, args.len());
-                                        match &args[0]{
-                                            // must be move _*
-                                            mir::Operand::Copy(_) => todo!(),
-                                            mir::Operand::Constant(_) => todo!(),
-                                            mir::Operand::Move(p) => {
-                                                let right =  resolve_project(p);
-                                                let right_var  = alias_map.get(&right).unwrap();
-                                                
-                                                let left = resolve_project(&destination);
-                                                let left_var = VariableNode::new(left);
-
-                                                // update the lock set facts
-                                                let fact = self.lock_set_facts.get_mut(&(def_id.clone(), bb_index)).unwrap();
-                                                fact.insert(left, LockGuard::new(right_var.get_possible_locks()));
-                                                
-                                                // update alias_map
-                                                // left_var.merge_alias_set(right_var);
-                                                left_var.strong_update_possible_locks(right_var);
-                                                alias_map.insert(left, left_var);
-                                            },
-                                        }
-                                    }
                                 }
                             },
                             // maybe problematic
@@ -382,6 +401,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             },
         }
     }
+
     pub fn merge(&mut self, pre: &BasicBlock, def_id: DefId, bb_index: usize){
         // merge the lock set
         self.lock_set_facts.entry((def_id, pre.as_usize())).or_insert_with(|| {
@@ -433,12 +453,18 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                         // 还有一种解决方案：在这里不用强更新锁集中的index信息，而是修改drop的处理逻辑，将遍历drop的alias集合，然后从锁集中删掉所有出现的guard
                         let right = resolve_project(p);
                         let right_var = alias_map.get(&right).unwrap();
-                        let left_var = VariableNode::new(left);
-                        left_var.merge_alias_set(right_var);
-                        left_var.alias_set.add_variable(right_var.clone());
-                        left_var.strong_update_possible_locks(right_var);
                         // FIXME: 这里要看是不是left第一次插入alias map，如果是，就直接插入，如果不是，应该和原来的left合并一下再写回去
-                        alias_map.insert(left, left_var);
+                        if let Some(left_var) = alias_map.get(&left){
+                            let left_var = left_var.clone();
+                            left_var.merge_alias_set(right_var);
+                            left_var.strong_update_possible_locks(right_var);
+                        }
+                        else{
+                            let left_var = VariableNode::new(left);
+                            left_var.merge_alias_set(right_var);
+                            left_var.strong_update_possible_locks(right_var);
+                            alias_map.insert(left, left_var);
+                        }
                     },
                     mir::Operand::Constant(_) => panic!("Mutex should not be constant!"),
                 }
@@ -449,8 +475,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 let right_var = alias_map.get(&right).unwrap();
                 let left_var = VariableNode::new(left);
                 left_var.merge_alias_set(right_var);
-                left_var.alias_set.add_variable(right_var.clone());
-                // left_var.alias_set.add_variable(left_var.clone());
                 left_var.strong_update_possible_locks(right_var);
                 alias_map.insert(left, left_var);
             },
@@ -542,6 +566,15 @@ pub fn is_primitive<'tcx>(ty: &Ty<'tcx>) -> bool{
     }
 }
 
+pub fn is_mutex_method(def_path: &String) -> bool{
+    def_path.starts_with("std::sync::Mutex")
+}
+
+pub fn is_smart_pointer(def_path: &String) -> bool{
+    def_path.starts_with("std::sync::Arc")
+}
+
 fn find_guard(lock_fact: &LockSetFact, id: usize){
     
 }
+
