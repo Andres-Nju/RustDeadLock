@@ -56,8 +56,8 @@ impl<'tcx> Display for TerminatorKind<'tcx>{
                 match func {
                     Operand::Constant(constant) => {
                             match constant.ty().kind() {
-                                ty::FnDef(id, ..) =>
-                                    s += &format!("Call: FnDid: {}", id.index.as_usize()).as_str(),
+                                ty::FnDef(id, args) =>
+                                    s += &format!("Call: FnDid: {}, args: {:?}", id.index.as_usize(), args).as_str(),
                                 _ => (),
                             }
                     },
