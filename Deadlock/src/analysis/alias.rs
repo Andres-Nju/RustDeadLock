@@ -33,18 +33,18 @@ pub struct AliasSet {
 
 impl fmt::Debug for VariableNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let lock_ids: Vec<_> = self.possible_locks.borrow().iter().map(|lock| (lock.def_id, lock.id)).collect();
+        // let lock_ids: Vec<_> = self.possible_locks.borrow().iter().map(|lock| (lock.def_id, lock.id)).collect();
         f.debug_struct("VariableNode")
          .field("index", &self.index)
-         .field("alias_set", &self.alias_set)
-         .field("possible_locks", &lock_ids)
+        //  .field("alias_set", &self.alias_set)
+        //  .field("possible_locks", &lock_ids)
          .finish()
     }
 }
 pub struct VariableNode {
     pub index: usize,
-    pub alias_set: Rc<AliasSet>, 
-    possible_locks: Rc<RefCell<FxHashSet<Rc<LockObject>>>>,
+    // pub alias_set: Rc<AliasSet>, 
+    // possible_locks: Rc<RefCell<FxHashSet<Rc<LockObject>>>>,
 }
 
 
@@ -69,6 +69,14 @@ impl AliasSet {
         })
     }
 
+    pub fn new_self(var: Rc<VariableNode>) -> Rc<Self> {
+        let set = Rc::new(AliasSet {
+            variables: RefCell::new(FxHashSet::default()),
+        });
+        set.add_variable(var);
+        set
+    }
+
     pub fn add_variable(&self, var: Rc<VariableNode>) {
         self.variables.borrow_mut().insert(var);
     }
@@ -87,26 +95,26 @@ impl VariableNode {
     pub fn new(index: usize) -> Rc<Self> {
         let node = Rc::new(VariableNode {
             index,
-            alias_set: AliasSet::new(),
-            possible_locks: Rc::new(RefCell::new(FxHashSet::default())),
+            // alias_set: AliasSet::new(),
+            // possible_locks: Rc::new(RefCell::new(FxHashSet::default())),
         });
-        node.alias_set.add_variable(node.clone());
+        // node.alias_set.add_variable(node.clone());
         node
     }
 
-    pub fn merge_alias_set(&self, other: &Rc<VariableNode>){
-        self.alias_set.merge(&other.alias_set);
-    }
+    // pub fn merge_alias_set(&self, other: &Rc<VariableNode>){
+    //     self.alias_set.merge(&other.alias_set);
+    // }
 
-    pub fn strong_update_possible_locks(&self, other: &Rc<VariableNode>) {
-        *self.possible_locks.borrow_mut() = other.possible_locks.borrow().clone();
-    }
+    // pub fn strong_update_possible_locks(&self, other: &Rc<VariableNode>) {
+    //     *self.possible_locks.borrow_mut() = other.possible_locks.borrow().clone();
+    // }
 
-    pub fn add_possible_lock(&self, lock: Rc<LockObject>) {
-        self.possible_locks.borrow_mut().insert(lock);
-    }
+    // pub fn add_possible_lock(&self, lock: Rc<LockObject>) {
+    //     self.possible_locks.borrow_mut().insert(lock);
+    // }
 
-    pub fn get_possible_locks(&self) -> Rc<RefCell<FxHashSet<Rc<LockObject>>>> {
-        self.possible_locks.clone()
-    }
+    // pub fn get_possible_locks(&self) -> Rc<RefCell<FxHashSet<Rc<LockObject>>>> {
+    //     self.possible_locks.clone()
+    // }
 }
