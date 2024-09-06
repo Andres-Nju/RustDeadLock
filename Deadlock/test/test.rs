@@ -5,14 +5,14 @@ fn main(){
     let b = Mutex::new(24);
     let a1 = a.lock().unwrap();
     let b1 = b.lock().unwrap();
-    // let c;
-    // if true{
-    //     c = a1;
-    // }
-    // else{
-    //     c = b1;
-    // }
-    // println!("{:?}", c);
+    let c;
+    if true{
+        c = a1;
+    }
+    else{
+        c = b1;
+    }
+    println!("{:?}", c);
     tt(&a);
 }
 

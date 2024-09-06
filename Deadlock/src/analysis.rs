@@ -1,4 +1,4 @@
-use std::{fmt::format, usize, rc::Rc};
+use std::{borrow::Borrow, fmt::format, rc::Rc, usize};
 
 use itertools::Itertools;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -109,7 +109,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 
         println!("Alias facts: ");
         for (def_id, mut vec) in grouped_map {
-            vec.sort_by_key(|k| k.0); // 按 usize 排序
+            vec.sort_by_key(|k| k.0);
             println!("{:?}:", def_id);
             for (key_usize, value) in vec {
                 println!("bb {}   ", key_usize);
@@ -124,7 +124,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     }
 
     fn print_lock_facts(&self){
-        let mut grouped_map: FxHashMap<DefId, Vec<(usize, &FxHashMap<usize, LockGuard>)>> = FxHashMap::default();
+        let mut grouped_map: FxHashMap<DefId, Vec<(usize, &FxHashMap<usize, Rc<LockGuard>>)>> = FxHashMap::default();
         for (def_id, value) in &self.lock_set_facts {
             for (key_usize, value) in value{
                 grouped_map
@@ -291,10 +291,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                         }
                                         //TODO: Clone?
                                         else if name.as_str() == "lock"{
-                                            // FIXME：这里可能要重新设计一下，
-                                            // 1. 每个bb的Lock fact是HashMap <HashSet<Lock>>的情形，或许要合并？
-                                            // 2. 如果是同一个锁，如何存储？
-                                            // _1 = std::sync::Mutex::<T>::lock(move _2)
                                             assert_eq!(1, args.len());
                                             match &args[0]{
                                                 // must be move _*
@@ -467,8 +463,18 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().extend(pre_lock_fact);
         // merge the alias_map
         let pre_alias_fact = self.alias_map[&def_id][&pre.as_usize()].clone();
-        self.alias_map.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().extend(pre_alias_fact);
-        
+        for (index, pre_set) in pre_alias_fact.into_iter(){
+            let new_alias_set = AliasSet::new();
+            for item in pre_set.as_ref().variables.borrow().iter(){
+                new_alias_set.add_variable(item.clone());
+            }
+            if let Some(cur_set) = self.alias_map.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().get(&index){
+                for item in cur_set.as_ref().variables.borrow().iter(){
+                    new_alias_set.add_variable(item.clone());
+                }
+            }
+            self.alias_map.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().insert(index, new_alias_set);
+        }
     }
 
     pub fn visit_statement(&mut self, def_id: DefId, bb_index: usize, statement: &Statement<'tcx>, decls: &LocalDecls){
@@ -504,7 +510,14 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 match op{
                     mir::Operand::Copy(p) => panic!("Mutex-related variables cannot be copied!"),
                     mir::Operand::Move(p) => {
-                        
+                        let right = resolve_project(p);
+                        let right_var_set = alias_map.get(&right).unwrap();
+                        let left_var = VariableNode::new(left);
+                        // left_var.merge_alias_set(right_var);
+                        // left_var.strong_update_possible_locks(right_var);
+                        // alias_map.insert(left, left_var);
+                        right_var_set.add_variable(left_var);
+                        alias_map.insert(left, right_var_set.clone());
                     },
                     mir::Operand::Constant(_) => panic!("Mutex should not be constant!"),
                 }
@@ -517,7 +530,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 // left_var.merge_alias_set(right_var);
                 // left_var.strong_update_possible_locks(right_var);
                 // alias_map.insert(left, left_var);
-                assert!(!alias_map.contains_key(&left));
                 right_var_set.add_variable(left_var);
                 alias_map.insert(left, right_var_set.clone());
             },
