@@ -112,7 +112,12 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             vec.sort_by_key(|k| k.0); // 按 usize 排序
             println!("{:?}:", def_id);
             for (key_usize, value) in vec {
-                println!("bb {} -> {:?}", key_usize, value);
+                println!("bb {}   ", key_usize);
+                let mut v: Vec<&usize> = value.keys().collect();
+                v.sort();
+                for i in v{
+                    println!("variable {} -> {:?}", i, value[i]);
+                }
             }
         }
         println!();
