@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell, hash::{Hash, Hasher}, rc::Rc
+    any::Any, cell::RefCell, hash::{Hash, Hasher}, rc::Rc
 };
 use std::fmt;
 use rustc_hash::FxHashSet;
@@ -20,7 +20,7 @@ impl LockObject {
 
 impl fmt::Debug for AliasSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let indices: Vec<_> = self.variables.borrow().iter().map(|node| node.index).collect();
+        let indices: Vec<_> = self.variables.borrow().iter().map(|node| format!("{:?}::{:?}", node.def_id.index.as_usize(), node.index)).collect();
         f.debug_struct("AliasSet")
          .field("variables", &indices)
          .finish()
@@ -42,6 +42,7 @@ impl fmt::Debug for VariableNode {
     }
 }
 pub struct VariableNode {
+    pub def_id: DefId,
     pub index: usize,
     // pub alias_set: Rc<AliasSet>, 
     // possible_locks: Rc<RefCell<FxHashSet<Rc<LockObject>>>>,
@@ -50,7 +51,7 @@ pub struct VariableNode {
 
 impl PartialEq for VariableNode {
     fn eq(&self, other: &Self) -> bool {
-        self.index == other.index
+        self.def_id == other.def_id && self.index == other.index
     }
 }
 
@@ -58,6 +59,7 @@ impl Eq for VariableNode {}
 
 impl Hash for VariableNode {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        self.def_id.hash(state);
         self.index.hash(state);
     }
 }
@@ -92,8 +94,9 @@ impl AliasSet {
 }
 
 impl VariableNode {
-    pub fn new(index: usize) -> Rc<Self> {
+    pub fn new(def_id: DefId, index: usize) -> Rc<Self> {
         let node = Rc::new(VariableNode {
+            def_id,
             index,
             // alias_set: AliasSet::new(),
             // possible_locks: Rc::new(RefCell::new(FxHashSet::default())),
