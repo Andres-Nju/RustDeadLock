@@ -13,10 +13,6 @@ _9:  @ std::sync::MutexGuard<ReErased, i32>
 _10:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
 _11:  @ &ReErased std::sync::Mutex<i32> 
 _12:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_13:  @ () 
-_14:  @ std::fmt::Arguments<ReErased> 
-_15:  @ &ReErased [&ReErased str] 
-_16:  @ &ReErased [&ReErased str; 1_usize] 
 
 [mutex => _1, mutex_clone => _3, mu1 => _5, mu2 => _9]
 bb 0 {
@@ -30,81 +26,67 @@ CleanUp: false
 bb 2 {
 CleanUp: false
     Assign((_4, &_1)) @ _4=&_1 @ RefThe type is []
-    _3 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(_4) -> [return: bb3, unwind: bb19] @ Call: FnDid: 2441, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    _3 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(_4) -> [return: bb3, unwind: bb16] @ Call: FnDid: 2441, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
 }
 bb 3 {
 CleanUp: false
     Assign((_8, &_1)) @ _8=&_1 @ RefThe type is []
-    _7 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _8) -> [return: bb4, unwind: bb18] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    _7 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _8) -> [return: bb4, unwind: bb15] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
 }
 bb 4 {
 CleanUp: false
-    _6 = std::sync::Mutex::<i32>::lock(_7) -> [return: bb5, unwind: bb18] @ Call: FnDid: 6375, args: [i32]
+    _6 = std::sync::Mutex::<i32>::lock(_7) -> [return: bb5, unwind: bb15] @ Call: FnDid: 6375, args: [i32]
 }
 bb 5 {
 CleanUp: false
-    _5 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _6) -> [return: bb6, unwind: bb18] @ Call: FnDid: 9195, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
+    _5 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _6) -> [return: bb6, unwind: bb15] @ Call: FnDid: 9195, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
 }
 bb 6 {
 CleanUp: false
     Assign((_12, &_3)) @ _12=&_3 @ RefThe type is []
-    _11 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _12) -> [return: bb7, unwind: bb17] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    _11 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _12) -> [return: bb7, unwind: bb14] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
 }
 bb 7 {
 CleanUp: false
-    _10 = std::sync::Mutex::<i32>::lock(_11) -> [return: bb8, unwind: bb17] @ Call: FnDid: 6375, args: [i32]
+    _10 = std::sync::Mutex::<i32>::lock(_11) -> [return: bb8, unwind: bb14] @ Call: FnDid: 6375, args: [i32]
 }
 bb 8 {
 CleanUp: false
-    _9 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _10) -> [return: bb9, unwind: bb17] @ Call: FnDid: 9195, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
+    _9 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _10) -> [return: bb9, unwind: bb14] @ Call: FnDid: 9195, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
 }
 bb 9 {
 CleanUp: false
-    Assign((_16, const _)) @ _16=const _ @ Use
-    Assign((_15, _16 as &[&str] (PointerCoercion(Unsize)))) @ _15=_16 as &[&str] (PointerCoercion(Unsize)) @ Cast
-    _14 = std::fmt::Arguments::<'_>::new_const(move _15) -> [return: bb10, unwind: bb16] @ Call: FnDid: 9865, args: [ReErased, true]
+    drop(_9) -> [return: bb10, unwind: bb14] @ Drop
 }
 bb 10 {
 CleanUp: false
-    _13 = std::io::_print(move _14) -> [return: bb11, unwind: bb16] @ Call: FnDid: 3326, args: []
+    drop(_5) -> [return: bb11, unwind: bb15] @ Drop
 }
 bb 11 {
 CleanUp: false
-    drop(_9) -> [return: bb12, unwind: bb17] @ Drop
+    drop(_3) -> [return: bb12, unwind: bb16] @ Drop
 }
 bb 12 {
 CleanUp: false
-    drop(_5) -> [return: bb13, unwind: bb18] @ Drop
+    drop(_1) -> [return: bb13, unwind continue] @ Drop
 }
 bb 13 {
 CleanUp: false
-    drop(_3) -> [return: bb14, unwind: bb19] @ Drop
+    return @ Return
 }
 bb 14 {
-CleanUp: false
-    drop(_1) -> [return: bb15, unwind continue] @ Drop
+CleanUp: true
+    drop(_5) -> [return: bb15, unwind terminate(cleanup)] @ Drop
 }
 bb 15 {
-CleanUp: false
-    return @ Return
+CleanUp: true
+    drop(_3) -> [return: bb16, unwind terminate(cleanup)] @ Drop
 }
 bb 16 {
 CleanUp: true
-    drop(_9) -> [return: bb17, unwind terminate(cleanup)] @ Drop
+    drop(_1) -> [return: bb17, unwind terminate(cleanup)] @ Drop
 }
 bb 17 {
-CleanUp: true
-    drop(_5) -> [return: bb18, unwind terminate(cleanup)] @ Drop
-}
-bb 18 {
-CleanUp: true
-    drop(_3) -> [return: bb19, unwind terminate(cleanup)] @ Drop
-}
-bb 19 {
-CleanUp: true
-    drop(_1) -> [return: bb20, unwind terminate(cleanup)] @ Drop
-}
-bb 20 {
 CleanUp: true
     resume @ UnwindResume
 }

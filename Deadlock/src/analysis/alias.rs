@@ -2,19 +2,22 @@ use std::{
     any::Any, cell::RefCell, hash::{Hash, Hasher}, rc::Rc
 };
 use std::fmt;
-use rustc_hash::FxHashSet;
-use rustc_hir::def_id::DefId;
-
+use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hir::def_id::{DefId, LocalDefId};
+pub type AliasFact = FxHashMap<usize, (Rc<VariableNode>, Rc<AliasSet>)>;
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct LockObject {
-    pub def_id: DefId,
     pub id: usize,
 }
 
 impl LockObject {
-    pub fn new(def_id: DefId, id: usize) -> Rc<Self> {
-        Rc::new(LockObject { def_id, id })
+    pub fn new(id: usize) -> Rc<Self> {
+        Rc::new(LockObject { id })
+    }
+
+    pub fn id(&self) -> usize{
+        self.id
     }
 }
 
@@ -41,6 +44,13 @@ impl fmt::Debug for VariableNode {
          .finish()
     }
 }
+
+impl PartialEq for AliasSet{
+    fn eq(&self, other: &Self) -> bool{
+        self.variables == other.variables
+    }
+}
+
 pub struct VariableNode {
     pub def_id: DefId,
     pub index: usize,
@@ -104,7 +114,6 @@ impl VariableNode {
         // node.alias_set.add_variable(node.clone());
         node
     }
-
     // pub fn merge_alias_set(&self, other: &Rc<VariableNode>){
     //     self.alias_set.merge(&other.alias_set);
     // }
@@ -120,4 +129,22 @@ impl VariableNode {
     // pub fn get_possible_locks(&self) -> Rc<RefCell<FxHashSet<Rc<LockObject>>>> {
     //     self.possible_locks.clone()
     // }
+}
+
+#[cfg(test)]
+mod tests{
+    use rustc_index::Idx;
+    use super::*;
+
+    #[test]
+    fn compare_alias_set() {
+        let alias_set_1 = AliasSet::new();
+        let alias_set_2 = AliasSet::new();
+        assert_eq!(alias_set_1, alias_set_2);
+        let node_1 = VariableNode::new(DefId::from(LocalDefId::new(10)), 1);
+        let node_2 = VariableNode::new(DefId::from(LocalDefId::new(10)), 1);
+        alias_set_1.add_variable(node_1);
+        alias_set_2.add_variable(node_2);
+        assert_eq!(alias_set_1, alias_set_2);
+    }
 }

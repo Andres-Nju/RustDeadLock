@@ -21,7 +21,14 @@ pub enum Lock{
 
 #[derive(Debug, Clone)]
 pub struct LockGuard{
-    pub possible_locks: RefCell<FxHashSet<Rc<LockObject>>>,
+    pub index: usize, 
+    pub lock: Rc<LockObject>,
+}
+
+impl PartialEq for LockGuard{
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index && self.lock == other.lock
+    }
 }
 
 impl Mutex {
@@ -52,21 +59,18 @@ impl Lock{
 pub type LockSetFact = FxHashMap<usize, Rc<LockGuard>>;
 
 impl LockGuard{
-    pub fn new() -> Self {
-        LockGuard{
-            possible_locks: RefCell::new(FxHashSet::default())
-        }
+    pub fn new(index: usize, lock: Rc<LockObject>) -> Rc<Self> {
+        Rc::new(LockGuard{
+            index,
+            lock
+        })
     }
 
-    pub fn new_self(lock: Rc<LockObject>) -> Self{
-        let guard = LockGuard{
-            possible_locks: RefCell::new(FxHashSet::default())
-        };
-        guard.add_lock(lock);
-        guard
+    pub fn index(&self) -> usize{
+        self.index
     }
 
-    pub fn add_lock(&self, obj: Rc<LockObject>){
-        self.possible_locks.borrow_mut().insert(obj);
+    pub fn lock(&self) -> &LockObject{
+        &self.lock
     }
 }

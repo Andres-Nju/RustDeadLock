@@ -1,5 +1,6 @@
 use std::{borrow::Borrow, fmt::format, rc::Rc, usize};
 
+use fact::MapFact;
 use itertools::Itertools;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -10,7 +11,7 @@ use rustc_middle::{
     ty::{self, Ty, TyCtxt, TyKind}
 };
 use lock::{Lock, LockGuard, LockSetFact};
-use alias::{AliasSet, LockObject, VariableNode};
+use alias::{AliasSet, LockObject, VariableNode, AliasFact};
 
 use rustc_middle::mir::{
     Location,
@@ -23,8 +24,8 @@ mod visitor;
 pub mod callgraph;
 pub mod lock;
 pub mod alias;
+pub mod fact;
 
-pub type AliasFact = FxHashMap<usize, (Rc<VariableNode>, Rc<AliasSet>)>;
 pub struct LockSetAnalysis<'tcx>{
     tcx: TyCtxt<'tcx>, 
     call_graph: CallGraph<'tcx>,
@@ -60,13 +61,12 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         self.init();
         // traverse the functions in a reversed topo order 
         for def_id in self.call_graph.topo.clone(){
-            // let body = self.tcx.instance_mir(ty::InstanceDef::Item(def_id));
-            // TODO: which mir to choose? optimized or raw with storage statements?
             if self.tcx.is_mir_available(def_id) {
-                // let body = &self.tcx.mir_built(def_id.as_local().unwrap()).steal();
                 let body = self.tcx.optimized_mir(def_id);
                 println!("Now analyze function {:?}, {:?}", body.span, self.tcx.def_path_str(def_id));
                 if self.tcx.def_path(def_id).data.len() == 1{
+                    // only analyze functions defined in current crate
+                    // FIXME: closure?
                     self.visit_body(def_id, body);
                 }      
             }
@@ -167,12 +167,11 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 // create a node for the arg (parameter, actually)
                 let alias_map = alias_map.get_mut(&0).unwrap();
                 let var = VariableNode::new(def_id.clone(), index);
-                alias_map.entry(index).or_insert((var.clone(), AliasSet::new_self(var)));
+                alias_map.update(index,(var.clone(), AliasSet::new_self(var)));
             }
         }
-        // 3. resolve all the local declarations before statements
+        // 3. resolve all the local declarations before statements, maybe?
         let decls = body.local_decls();
-        
         for (local, decl) in decls.iter_enumerated(){
             let ty = decl.ty;
             let index = local.as_usize();
@@ -186,7 +185,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         let mut work_list = vec![0];
         while !work_list.is_empty(){
             let current_bb_index = work_list.pop().expect("Elements in non-empty work_list should always be valid!");
-            // println!("{:?}", self.alias_flow_graph[&def_id]);
             println!("now analysis bb {}", current_bb_index);
             if let Some(targets) = self.visit_bb(def_id, current_bb_index, body){
                 work_list.extend(targets);
@@ -211,11 +209,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         data.statements.iter().for_each(|statement| self.visit_statement(def_id, bb_index, statement, body.local_decls()));
         // process the terminator
         self.visit_terminator(&def_id, bb_index, &data.terminator().kind, &mut gotos);
-        
-        flag |= temp1.keys().collect::<FxHashSet<_>>().eq(&self.lock_set_facts[&def_id][&bb_index].keys().collect());
-    
-        // TODO: how to judge the differences in aliases?
-        // flag |= temp2.keys().collect::<FxHashSet<_>>().eq(&self.lock_set_facts[&def_id][&bb_index].keys().collect());
+        flag |= temp1.ne(&self.lock_set_facts[&def_id][&bb_index]);
+        flag |= temp2.ne(&self.alias_map[&def_id][&bb_index]);
         if flag{
             Some(gotos)
         }
@@ -229,16 +224,16 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         match terminator_kind{ // TODO: if return a lock?
             rustc_middle::mir::TerminatorKind::Drop { place, target, .. } => {
                 gotos.push(target.as_usize());
-                // if drop a lock guard, find it and kill it in lock fact
-                let local = resolve_project(place);
-                let lock_fact = self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
-                if !lock_fact.contains_key(&local){
-                    return;
-                }
-                // look at whether the lock fact contains local, if so, just remove it
-                println!("the lock need to be remove: {:?}", local);
-                if let None = lock_fact.remove(&local) {
-                    panic!("Can not find any lock guard of index {:?}", local);
+                // if drop a lock guard, find it/its alias and kill it in lock fact
+                let to_be_dropped = resolve_project(place);
+                let lock_set_fact = self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
+                
+                // FIXME: drop all the alias may be unsound, if multiple locks are going to be dropped here
+                // Peahen only drops those variable which only points to one lock in the fact
+                for alias in self.alias_map.get(def_id).unwrap().get(&bb_index).unwrap().get(&to_be_dropped).unwrap().1.variables.borrow().iter(){
+                    if lock_set_fact.contains_key(&alias.index){
+                        lock_set_fact.remove(&alias.index);
+                    }
                 }
             },
             rustc_middle::mir::TerminatorKind::Call { func, args, destination, target, unwind, call_source, fn_span } => {
@@ -280,11 +275,9 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 }
                                                 mir::Operand::Constant(_) |
                                                 mir::Operand::Move(_) => {
-                                                    let lock_object = LockObject::new(def_id.clone(), left);
                                                     let left_var = VariableNode::new(def_id.clone(), left);
                                                     assert!(!alias_map.contains_key(&left));
-                                                    alias_map.insert(left, (left_var.clone(), AliasSet::new_self(left_var)));
-                                                    // todo: how to manage the lock
+                                                    alias_map.update(left, (left_var.clone(), AliasSet::new_self(left_var)));
                                                 },
                                             }
                                         }
@@ -297,18 +290,16 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 mir::Operand::Copy(p) |
                                                 mir::Operand::Move(p) => {
                                                     let right =  resolve_project(p);
-                                                    let right_var  = alias_map.get(&right).unwrap();
-                                                    
                                                     let left = resolve_project(&destination);
                                                     let left_var = VariableNode::new(def_id.clone(), left);
 
-                                                    // TODO: update the lock set facts
-                                                    // let fact = self.lock_set_facts.get_mut(&(def_id.clone(), bb_index)).unwrap();
-                                                    // fact.insert(left, LockGuard::new(right_var.get_possible_locks()));
+                                                    // update the lock set facts
+                                                    let lock_set_fact = self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
+                                                    lock_set_fact.update(left, LockGuard::new(left, LockObject::new(right)));
                                                     
                                                     // update alias_map
                                                     assert!(!alias_map.contains_key(&left));
-                                                    alias_map.insert(left, (left_var.clone(), AliasSet::new_self(left_var)));
+                                                    alias_map.update(left, (left_var.clone(), AliasSet::new_self(left_var)));
                                                 },
                                             }
                                         }
@@ -326,11 +317,9 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                     let right = resolve_project(p);
                                                     let right_var_set = &alias_map.get(&right).unwrap().1;
                                                     let left_var = VariableNode::new(def_id.clone(), left);
-                                                    // left_var.merge_alias_set(right_var);
-                                                    // left_var.strong_update_possible_locks(right_var);
                                                     assert!(!alias_map.contains_key(&left));
                                                     right_var_set.add_variable(left_var.clone());
-                                                    alias_map.insert(left, (left_var, right_var_set.clone()));
+                                                    alias_map.update(left, (left_var, right_var_set.clone()));
                                                 },
                                             }
                                         }
@@ -349,22 +338,11 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 // like move assign, replace the old guard with new guard
                                                 let right = resolve_project(p);
                                                 let left = resolve_project(destination);
-                                                let lock_fact = self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
-                                                
-                                                // if let Some(value) = lock_fact.remove(&right){
-                                                //     lock_fact.insert(left, value);
-                                                // }
-                                                // else {
-                                                //     panic!("Can not find any lock guard of index {:?}", right);
-                                                // }
-                                                // update alias map
                                                 let left_var = VariableNode::new(def_id.clone(), left);
                                                 let right_var_set  = &alias_map.get(&right).unwrap().1;
-                                                // left_var.strong_update_possible_locks(right_var);
                                                 assert!(!alias_map.contains_key(&left));
-                                                // alias_map.insert(left, AliasSet::new_self(left_var));
                                                 right_var_set.add_variable(left_var.clone());
-                                                alias_map.insert(left, (left_var, right_var_set.clone()));
+                                                alias_map.update(left, (left_var, right_var_set.clone()));
                                             },
                                         }
                                     } 
@@ -381,12 +359,9 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 let right_var_set  = &alias_map.get(&right).unwrap().1;
                                                 let left = resolve_project(&destination);
                                                 let left_var = VariableNode::new(def_id.clone(), left);
-                                                // left_var.merge_alias_set(right);
-                                                // left_var.strong_update_possible_locks(right);
                                                 assert!(!alias_map.contains_key(&left));
-                                                // alias_map.insert(left, AliasSet::new_self(left_var));
                                                 right_var_set.add_variable(left_var.clone());
-                                                alias_map.insert(left, (left_var, right_var_set.clone()));
+                                                alias_map.update(left, (left_var, right_var_set.clone()));
                                             },
                                         }
                                     }
@@ -402,11 +377,9 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 let right_var_set  = &alias_map.get(&right).unwrap().1;
                                                 let left = resolve_project(&destination);
                                                 let left_var = VariableNode::new(def_id.clone(), left);
-                                                // left_var.merge_alias_set(right);
-                                                // left_var.strong_update_possible_locks(right);
                                                 assert!(!alias_map.contains_key(&left));
                                                 right_var_set.add_variable(left_var.clone());
-                                                alias_map.insert(left, (left_var, right_var_set.clone()));
+                                                alias_map.update(left, (left_var, right_var_set.clone()));
                                             },
                                         }
                                     }
@@ -454,24 +427,14 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     }
 
     pub fn merge(&mut self, pre: &BasicBlock, def_id: DefId, bb_index: usize){
-        // TODO: the correct logic of merge
         // merge the lock set
         let pre_lock_fact = self.lock_set_facts[&def_id][&pre.as_usize()].clone();
-        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().extend(pre_lock_fact);
+        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().clear();
+        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().meet(pre_lock_fact);
         // merge the alias_map
         let pre_alias_fact = self.alias_map[&def_id][&pre.as_usize()].clone();
-        for (index, (node, pre_set)) in pre_alias_fact.into_iter(){
-            let new_alias_set = AliasSet::new();
-            for item in pre_set.as_ref().variables.borrow().iter(){
-                new_alias_set.add_variable(item.clone());
-            }
-            if let Some((_, cur_set)) = self.alias_map.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().get(&index){
-                for item in cur_set.as_ref().variables.borrow().iter(){
-                    new_alias_set.add_variable(item.clone());
-                }
-            }
-            self.alias_map.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().insert(index, (node, new_alias_set));
-        }
+        self.alias_map.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().meet(pre_alias_fact);
+        
     }
 
     pub fn visit_statement(&mut self, def_id: DefId, bb_index: usize, statement: &Statement<'tcx>, decls: &LocalDecls){
@@ -510,11 +473,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                         let right = resolve_project(p);
                         let right_var_set = &alias_map.get(&right).unwrap().1;
                         let left_var = VariableNode::new(def_id.clone(), left);
-                        // left_var.merge_alias_set(right_var);
-                        // left_var.strong_update_possible_locks(right_var);
-                        // alias_map.insert(left, left_var);
                         right_var_set.add_variable(left_var.clone());
-                        alias_map.insert(left, (left_var, right_var_set.clone()));
+                        alias_map.update(left, (left_var, right_var_set.clone()));
                     },
                     mir::Operand::Constant(_) => panic!("Mutex should not be constant!"),
                 }
@@ -524,11 +484,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 let right = resolve_project(p);
                 let right_var_set = &alias_map.get(&right).unwrap().1;
                 let left_var = VariableNode::new(def_id.clone(), left);
-                // left_var.merge_alias_set(right_var);
-                // left_var.strong_update_possible_locks(right_var);
-                // alias_map.insert(left, left_var);
                 right_var_set.add_variable(left_var.clone());
-                alias_map.insert(left, (left_var, right_var_set.clone()));
+                alias_map.update(left, (left_var, right_var_set.clone()));
             },
             Rvalue::Repeat(_, _) => todo!(),
             Rvalue::ThreadLocalRef(_) => todo!(),
