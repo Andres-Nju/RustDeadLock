@@ -117,8 +117,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                     println!("variable {} -> {:?}", i, value[i]);
                 }
             }
+            println!();
         }
-        println!();
     }
 
     fn print_lock_facts(&self){
@@ -139,8 +139,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             for (key_usize, value) in vec {
                 println!("bb {} -> {:?}", key_usize, value);
             }
+            println!();
         }
-        println!();
     }
 
     fn init_func(&mut self, def_id: &DefId, body: &Body){
@@ -351,8 +351,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                         assert_eq!(1, args.len());
                                         match &args[0]{
                                             // must be move _*
-                                            mir::Operand::Copy(_) => todo!(),
                                             mir::Operand::Constant(_) => todo!(),
+                                            mir::Operand::Copy(p) |
                                             mir::Operand::Move(p) => {
                                                 // right is &a
                                                 let right =  resolve_project(p);
