@@ -5,7 +5,7 @@ use rustc_session::config;
 use std::{path::PathBuf, process, str, sync::Arc};
 use structopt::StructOpt;
 
-use crate::{analysis::{callgraph::CallGraph, LockSetAnalysis}, context::Context, option::Options, utils::{self, mir::{Display, ShowMir}}
+use crate::{analysis::{alias::{consume_alias_results, AliasAnalysis}, callgraph::CallGraph, LockSetAnalysis}, context::Context, option::Options, utils::{self, mir::{Display, ShowMir}}
 };
 
 
@@ -79,9 +79,12 @@ impl Driver {
         let tcx = context.tcx;
         let mut show_mir = ShowMir::new(tcx);
         let mut call_graph = CallGraph::new(tcx);
-        show_mir.start();
+        // show_mir.start();
         call_graph.start();
-        let mut lock_set_analysis = LockSetAnalysis::new(tcx, call_graph);
+        let mut alias_analysis = AliasAnalysis::new(tcx, call_graph);
+        alias_analysis.run_analysis();
+        let (tcx, call_graph, alias_map) = consume_alias_results(alias_analysis);
+        let mut lock_set_analysis = LockSetAnalysis::new(tcx, call_graph, alias_map);
         lock_set_analysis.run_analysis();
         // for (did, name) in &context.all_funcs {
         //     let mir = tcx.optimized_mir(did.as_local().unwrap()).clone();

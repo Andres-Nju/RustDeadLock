@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt::format, rc::Rc, usize};
+use std::{borrow::Borrow, fmt::format, rc::Rc, thread::current, usize};
 
 use fact::MapFact;
 use itertools::Itertools;
@@ -7,11 +7,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use callgraph::CallGraph;
 use rustc_hir::{def_id::DefId, definitions::{DefPath, DefPathData}};
 use rustc_middle::{
-    mir::{BasicBlock, BasicBlockData, BasicBlocks, HasLocalDecls, LocalDecls, Place, Rvalue, Successors, TerminatorKind, VarDebugInfoContents}, 
+    mir::{self, BasicBlock, BasicBlockData, BasicBlocks, HasLocalDecls, Local, LocalDecls, Place, Rvalue, Successors, TerminatorKind, VarDebugInfoContents}, 
     ty::{self, Ty, TyCtxt, TyKind}
 };
 use lock::{Lock, LockGuard, LockSetFact};
-use alias::{AliasSet, LockObject, VariableNode, AliasFact};
+use alias::{AliasAnalysis, AliasFact, AliasSet, LockObject, VariableNode};
 
 use rustc_middle::mir::{
     Location,
@@ -19,6 +19,7 @@ use rustc_middle::mir::{
     Statement,
     Terminator,
 };
+
 
 mod visitor;
 pub mod callgraph;
@@ -34,11 +35,11 @@ pub struct LockSetAnalysis<'tcx>{
     // a DefId + BasicBlock's index pair determines a bb
     lock_set_facts: FxHashMap<DefId, FxHashMap<usize, LockSetFact>>,
 
-
     // alias_flow_graph: record the alias relationship for each function
     alias_map: FxHashMap<DefId, FxHashMap<usize, AliasFact>>,
 
-
+    // the traversing order of bbs in each function
+    control_flow_graph: FxHashMap<DefId, Vec<BasicBlock>>,
     // intra-analysis data
     // record all variable debug info in current function body
     // TODO: shadow nested scope
@@ -46,22 +47,22 @@ pub struct LockSetAnalysis<'tcx>{
 }
 
 impl<'tcx> LockSetAnalysis<'tcx> {
-    pub fn new(tcx: TyCtxt<'tcx>, call_graph: CallGraph<'tcx>) -> Self{
+    pub fn new(tcx: TyCtxt<'tcx>, call_graph: CallGraph<'tcx>, alias_map: FxHashMap<DefId, FxHashMap<usize, AliasFact>>) -> Self{
         Self{
             tcx,
             lock_set_facts: FxHashMap::default(),
-            alias_map: FxHashMap::default(),
+            alias_map,
             var_debug_info: FxHashMap::default(),
             call_graph,
+            control_flow_graph: FxHashMap::default(),
         }
     }
 
     pub fn run_analysis(&mut self){
-        // initialize
-        self.init();
         // traverse the functions in a reversed topo order 
         for def_id in self.call_graph.topo.clone(){
-            if self.tcx.is_mir_available(def_id) {
+            if self.tcx.is_mir_available(def_id) && self.alias_map.contains_key(&def_id){
+                // each function is analyzed only once
                 let body = self.tcx.optimized_mir(def_id);
                 println!("Now analyze function {:?}, {:?}", body.span, self.tcx.def_path_str(def_id));
                 if self.tcx.def_path(def_id).data.len() == 1{
@@ -70,81 +71,24 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                     self.visit_body(def_id, body);
                 }      
             }
-            else {
-                println!("Function {:?} MIR Unavailable!", def_id);
-            }
         }
-        self.print_alias();
-        self.print_lock_facts();
-    }
-
-    fn init(&mut self){
-        for def_id in self.call_graph.topo.clone(){
-            if self.tcx.is_mir_available(def_id) && self.tcx.def_path(def_id).data.len() == 1 {
-                self.alias_map.entry(def_id).or_insert(FxHashMap::default());
-                self.lock_set_facts.entry(def_id).or_insert(FxHashMap::default());
-                for (index, basic_block_data) in self.tcx.optimized_mir(def_id).basic_blocks.iter().enumerate(){
-                    if !basic_block_data.is_cleanup{
-                        self.alias_map.get_mut(&def_id).unwrap().entry(index).or_insert(FxHashMap::default());
-                        self.lock_set_facts.get_mut(&def_id).unwrap().entry(index).or_insert(FxHashMap::default());
-                    }
-                }
-                
-            }
-        }
-    }
-    
-    fn print_alias(&self){
-        let mut grouped_map: FxHashMap<DefId, Vec<(usize, &FxHashMap<usize, (Rc<VariableNode>, Rc<AliasSet>)>)>> = FxHashMap::default();
-        for (def_id, value) in &self.alias_map {
-            for (key_usize, value) in value{
-                grouped_map
-                .entry(def_id.clone())
-                .or_insert_with(Vec::new)
-                .push((*key_usize, value));
-            }
-        }
-
-        println!("Alias facts: ");
-        for (def_id, mut vec) in grouped_map {
-            vec.sort_by_key(|k| k.0);
-            println!("{:?}:", def_id);
-            for (key_usize, value) in vec {
-                println!("bb {}   ", key_usize);
-                let mut v: Vec<&usize> = value.keys().collect();
-                v.sort();
-                for i in v{
-                    println!("variable {} -> {:?}", i, value[i]);
-                }
-            }
-            println!();
-        }
-    }
-
-    fn print_lock_facts(&self){
-        let mut grouped_map: FxHashMap<DefId, Vec<(usize, &FxHashMap<usize, Rc<LockGuard>>)>> = FxHashMap::default();
-        for (def_id, value) in &self.lock_set_facts {
-            for (key_usize, value) in value{
-                grouped_map
-                .entry(def_id.clone())
-                .or_insert_with(Vec::new)
-                .push((*key_usize, value));
-            }
-        }
-
-        println!("Lock set facts: ");
-        for (def_id, mut vec) in grouped_map {
-            vec.sort_by_key(|k| k.0); // 按 usize 排序
-            println!("{:?}:", def_id);
-            for (key_usize, value) in vec {
-                println!("bb {} -> {:?}", key_usize, value);
-            }
-            println!();
-        }
+        self.after_run();
     }
 
     fn init_func(&mut self, def_id: &DefId, body: &Body){
-        // 1. resolve the var_debug_info to get the var names
+        // 1. init the facts
+        if self.tcx.is_mir_available(def_id) && self.tcx.def_path(def_id.clone()).data.len() == 1 {
+            self.alias_map.entry(def_id.clone()).or_insert(FxHashMap::default());
+            self.lock_set_facts.entry(def_id.clone()).or_insert(FxHashMap::default());
+            for (index, basic_block_data) in self.tcx.optimized_mir(def_id).basic_blocks.iter().enumerate(){
+                if !basic_block_data.is_cleanup{
+                    self.alias_map.get_mut(&def_id).unwrap().entry(index).or_insert(FxHashMap::default());
+                    self.lock_set_facts.get_mut(&def_id).unwrap().entry(index).or_insert(FxHashMap::default());
+                }
+            }
+        }
+
+        // 2. resolve the var_debug_info to get the var names
         self.var_debug_info.clear(); // TODO: closure move? how to clear
         for (_, var) in body.var_debug_info.iter().enumerate(){
             let mut a = usize::MAX;
@@ -158,72 +102,58 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         }
         println!("{:?}", self.var_debug_info);
 
-        let alias_map = self.alias_map.get_mut(&def_id).unwrap();
-        // 2. resolve all the function arguments (parameters, actually)
-        for arg in body.args_iter(){
-            // TODO: the args, should be processed in inter-procedural analysis
-            if is_lock(&body.local_decls[arg].ty) {
-                let index = arg.as_usize();
-                // create a node for the arg (parameter, actually)
-                let alias_map = alias_map.get_mut(&0).unwrap();
-                let var = VariableNode::new(def_id.clone(), index);
-                alias_map.update(index,(var.clone(), AliasSet::new_self(var)));
+        // 3. compute the confrol flow graph in a reverse post-order
+        let mut reverse_post_order = vec![];
+        for bb in body.basic_blocks.reverse_postorder(){
+            if !body.basic_blocks.get(*bb).unwrap().is_cleanup{
+                reverse_post_order.push(bb.clone());
             }
         }
-        // 3. resolve all the local declarations before statements, maybe?
+        println!("{:?}", reverse_post_order);
+        self.control_flow_graph.entry(def_id.clone()).or_insert(reverse_post_order);
+        
+
+        // 4. resolve all the local declarations before statements, maybe?
         let decls = body.local_decls();
         for (local, decl) in decls.iter_enumerated(){
             let ty = decl.ty;
             let index = local.as_usize();
         }
 
-
     }
+
     pub fn visit_body(&mut self, def_id: DefId, body: &Body<'tcx>){
         self.init_func(&def_id, body);
-        
-        let mut work_list = vec![0];
-        while !work_list.is_empty(){
-            let current_bb_index = work_list.pop().expect("Elements in non-empty work_list should always be valid!");
-            println!("now analysis bb {}", current_bb_index);
-            if let Some(targets) = self.visit_bb(def_id, current_bb_index, body){
-                work_list.extend(targets);
-            }
+        // FIXME: redundant clone
+        for current_bb_index in self.control_flow_graph[&def_id].clone(){
+            println!("bb {:?} now under lock set analysis ", current_bb_index);
+            self.visit_bb(def_id, current_bb_index.as_usize(),  body);
         }
     }
 
-    pub fn visit_bb(&mut self, def_id: DefId, bb_index: usize, body: &Body<'tcx>) -> Option<Vec<usize>>{
-        let mut flag = false;
-        let mut gotos = vec![];
-        // if fact[bb] is none, initialize one
-        let data = &body.basic_blocks[BasicBlock::from(bb_index)];
-
+    pub fn visit_bb(&mut self, def_id: DefId, bb_index: usize, body: &Body){
         // merge the pres
-        let temp1 = self.lock_set_facts[&def_id][&bb_index].clone();
-        let temp2 = self.alias_map[&def_id][&bb_index].clone();
         for pre in body.basic_blocks.predecessors().get(BasicBlock::from_usize(bb_index)).unwrap(){
             // refactor the lock_set_facts access
             self.merge(pre, def_id, bb_index);
         }
-        // traverse the bb's statements
-        data.statements.iter().for_each(|statement| self.visit_statement(def_id, bb_index, statement, body.local_decls()));
-        // process the terminator
-        self.visit_terminator(&def_id, bb_index, &data.terminator().kind, &mut gotos);
-        flag |= temp1.ne(&self.lock_set_facts[&def_id][&bb_index]);
-        flag |= temp2.ne(&self.alias_map[&def_id][&bb_index]);
-        if flag{
-            Some(gotos)
-        }
-        else {
-            None
-        }
+        // only need to visit the terminator (function call)
+        // 1. guard = *.lock()
+        // 2. drop(guard)
+        self.visit_terminator(&def_id, bb_index, &body.basic_blocks[BasicBlock::from(bb_index)].terminator().kind);
     }
 
-    fn visit_terminator(&mut self, def_id: &DefId, bb_index: usize, terminator_kind: &TerminatorKind, gotos: &mut Vec<usize>){
+    pub fn merge(&mut self, pre: &BasicBlock, def_id: DefId, bb_index: usize){
+        // merge the lock set
+        let pre_lock_fact = self.lock_set_facts[&def_id][&pre.as_usize()].clone();
+        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().clear();
+        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().meet(pre_lock_fact);     
+    }
+
+    fn visit_terminator(&mut self, def_id: &DefId, bb_index: usize, terminator_kind: &TerminatorKind){
         let alias_map = self.alias_map.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
         match terminator_kind{ // TODO: if return a lock?
             rustc_middle::mir::TerminatorKind::Drop { place, target, .. } => {
-                gotos.push(target.as_usize());
                 // if drop a lock guard, find it/its alias and kill it in lock fact
                 let to_be_dropped = resolve_project(place);
                 let lock_set_fact = self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
@@ -237,9 +167,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 }
             },
             rustc_middle::mir::TerminatorKind::Call { func, args, destination, target, unwind, call_source, fn_span } => {
-                if let Some(bb) = target{
-                    gotos.push(bb.as_usize());
-                }
                 match func{
                     mir::Operand::Constant(constant) => {
                         match constant.ty().kind(){
@@ -267,22 +194,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                 let left = resolve_project(&destination);
                                 if let DefPathData::ValueNs(name) = &def_path.data[def_path.data.len() - 1].data{
                                     if is_mutex_method(&def_path_str){
-                                        if name.as_str() == "new"{
-                                            assert_eq!(1, args.len());
-                                            match &args[0]{
-                                                mir::Operand::Copy(_) => {
-                                                    panic!("should not go to this branch!");
-                                                }
-                                                mir::Operand::Constant(_) |
-                                                mir::Operand::Move(_) => {
-                                                    let left_var = VariableNode::new(def_id.clone(), left);
-                                                    assert!(!alias_map.contains_key(&left));
-                                                    alias_map.update(left, (left_var.clone(), AliasSet::new_self(left_var)));
-                                                },
-                                            }
-                                        }
-                                        //TODO: Clone?
-                                        else if name.as_str() == "lock"{
+                                        if name.as_str() == "lock"{
                                             assert_eq!(1, args.len());
                                             match &args[0]{
                                                 // must be move _*
@@ -290,97 +202,11 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 mir::Operand::Copy(p) |
                                                 mir::Operand::Move(p) => {
                                                     let right =  resolve_project(p);
-                                                    let left = resolve_project(&destination);
-                                                    let left_var = VariableNode::new(def_id.clone(), left);
-
                                                     // update the lock set facts
                                                     let lock_set_fact = self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
                                                     lock_set_fact.update(left, LockGuard::new(left, LockObject::new(right)));
-                                                    
-                                                    // update alias_map
-                                                    assert!(!alias_map.contains_key(&left));
-                                                    alias_map.update(left, (left_var.clone(), AliasSet::new_self(left_var)));
                                                 },
                                             }
-                                        }
-                                    }
-                                    else if is_smart_pointer(&def_path_str){
-                                        if name.as_str() == "new"{
-                                            // the same as ref assign
-                                            assert_eq!(1, args.len());
-                                            match &args[0]{
-                                                mir::Operand::Constant(_) |
-                                                mir::Operand::Copy(_) => {
-                                                    panic!("should not go to this branch!");
-                                                }
-                                                mir::Operand::Move(p) => {
-                                                    let right = resolve_project(p);
-                                                    let right_var_set = &alias_map.get(&right).unwrap().1;
-                                                    let left_var = VariableNode::new(def_id.clone(), left);
-                                                    assert!(!alias_map.contains_key(&left));
-                                                    right_var_set.add_variable(left_var.clone());
-                                                    alias_map.update(left, (left_var, right_var_set.clone()));
-                                                },
-                                            }
-                                        }
-                                    }
-                                    else if name.as_str() == "unwrap"{ // just update the arg with destination
-                                        // unwrap and lock all not merge the alias of right to left
-                                        assert_eq!(1, args.len());
-                                        if !is_lock(&self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(left)].ty){
-                                            return;
-                                        }
-                                        match &args[0]{
-                                            // must be move _*
-                                            mir::Operand::Copy(_) => todo!(),
-                                            mir::Operand::Constant(_) => todo!(),
-                                            mir::Operand::Move(p) => {
-                                                // like move assign, replace the old guard with new guard
-                                                let right = resolve_project(p);
-                                                let left = resolve_project(destination);
-                                                let left_var = VariableNode::new(def_id.clone(), left);
-                                                let right_var_set  = &alias_map.get(&right).unwrap().1;
-                                                assert!(!alias_map.contains_key(&left));
-                                                right_var_set.add_variable(left_var.clone());
-                                                alias_map.update(left, (left_var, right_var_set.clone()));
-                                            },
-                                        }
-                                    } 
-                                    else if name.as_str() == "deref"{
-                                        // FIXME: if the arg is not a smart pointer which wraps mutex
-                                        assert_eq!(1, args.len());
-                                        match &args[0]{
-                                            // must be move _*
-                                            mir::Operand::Constant(_) => todo!(),
-                                            mir::Operand::Copy(p) |
-                                            mir::Operand::Move(p) => {
-                                                // right is &a
-                                                let right =  resolve_project(p);
-                                                let right_var_set  = &alias_map.get(&right).unwrap().1;
-                                                let left = resolve_project(&destination);
-                                                let left_var = VariableNode::new(def_id.clone(), left);
-                                                assert!(!alias_map.contains_key(&left));
-                                                right_var_set.add_variable(left_var.clone());
-                                                alias_map.update(left, (left_var, right_var_set.clone()));
-                                            },
-                                        }
-                                    }
-                                    else if name.as_str() == "clone"{
-                                        assert_eq!(1, args.len());
-                                        // FIXME: if the cloned object is not a smart pointer which wraps mutex
-                                        match &args[0]{
-                                            // must be copy _*
-                                            mir::Operand::Move(_) => todo!(),
-                                            mir::Operand::Constant(_) => todo!(),
-                                            mir::Operand::Copy(p) => {
-                                                let right =  resolve_project(p);
-                                                let right_var_set  = &alias_map.get(&right).unwrap().1;
-                                                let left = resolve_project(&destination);
-                                                let left_var = VariableNode::new(def_id.clone(), left);
-                                                assert!(!alias_map.contains_key(&left));
-                                                right_var_set.add_variable(left_var.clone());
-                                                alias_map.update(left, (left_var, right_var_set.clone()));
-                                            },
                                         }
                                     }
                                 }
@@ -395,136 +221,77 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 }
             },
 
-            rustc_middle::mir::TerminatorKind::Goto { target } => {
-                gotos.push(target.as_usize());
-            },
-            rustc_middle::mir::TerminatorKind::SwitchInt { discr, targets } => {
-                for bb in targets.all_targets(){
-                    gotos.push(bb.as_usize());
-                }
-            },
+            rustc_middle::mir::TerminatorKind::Goto { .. } => (),
+            rustc_middle::mir::TerminatorKind::SwitchInt { .. } => (),
             rustc_middle::mir::TerminatorKind::UnwindResume => (),
             rustc_middle::mir::TerminatorKind::UnwindTerminate(_) => (),
             rustc_middle::mir::TerminatorKind::Return => (),
             rustc_middle::mir::TerminatorKind::Unreachable => (),
-            rustc_middle::mir::TerminatorKind::Assert { target, .. } => {
-                gotos.push(target.as_usize());
-            },
+            rustc_middle::mir::TerminatorKind::Assert { .. } => (),
             rustc_middle::mir::TerminatorKind::Yield { .. } => (),
             rustc_middle::mir::TerminatorKind::CoroutineDrop => (),
-            rustc_middle::mir::TerminatorKind::FalseEdge { real_target, .. } => {
-                gotos.push(real_target.as_usize());
-            },
-            rustc_middle::mir::TerminatorKind::FalseUnwind { real_target, .. } => {
-                gotos.push(real_target.as_usize());
-            },
-            rustc_middle::mir::TerminatorKind::InlineAsm { destination, ..} => {
-                if let Some(bb) = destination{
-                    gotos.push(bb.as_usize());
-                }
-            },
+            rustc_middle::mir::TerminatorKind::FalseEdge { .. } => (),
+            rustc_middle::mir::TerminatorKind::FalseUnwind { .. } => (),
+            rustc_middle::mir::TerminatorKind::InlineAsm { .. } => (),
         }
     }
-
-    pub fn merge(&mut self, pre: &BasicBlock, def_id: DefId, bb_index: usize){
-        // merge the lock set
-        let pre_lock_fact = self.lock_set_facts[&def_id][&pre.as_usize()].clone();
-        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().clear();
-        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().meet(pre_lock_fact);
-        // merge the alias_map
-        let pre_alias_fact = self.alias_map[&def_id][&pre.as_usize()].clone();
-        self.alias_map.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().meet(pre_alias_fact);
-        
+    
+    pub fn after_run(&self){
+        self.print_alias();
+        self.print_lock_facts();
     }
 
-    pub fn visit_statement(&mut self, def_id: DefId, bb_index: usize, statement: &Statement<'tcx>, decls: &LocalDecls){
-        match &statement.kind{
-            rustc_middle::mir::StatementKind::Assign(ref assign) => {
-                let left = resolve_project(&assign.0);
-                if is_lock(&decls[Local::from_usize(left)].ty) {
-                    self.visit_assign(&def_id, bb_index,&assign.0, &assign.1);
-                }
-            },
-            rustc_middle::mir::StatementKind::FakeRead(_) => (),
-            rustc_middle::mir::StatementKind::SetDiscriminant { .. } => (),
-            rustc_middle::mir::StatementKind::Deinit(_) => (),
-            rustc_middle::mir::StatementKind::StorageLive(_) => (),
-            rustc_middle::mir::StatementKind::StorageDead(_) => (),
-            rustc_middle::mir::StatementKind::Retag(_, _) => (),
-            rustc_middle::mir::StatementKind::PlaceMention(_) => (),
-            rustc_middle::mir::StatementKind::AscribeUserType(_, _) => (),
-            rustc_middle::mir::StatementKind::Coverage(_) => (),
-            rustc_middle::mir::StatementKind::Intrinsic(_) => (),
-            rustc_middle::mir::StatementKind::ConstEvalCounter => (),
-            rustc_middle::mir::StatementKind::Nop => (),
-        }
-    }
-
-    pub fn visit_assign(&mut self, def_id: &DefId, bb_index: usize, lhs: &Place, rhs: &Rvalue<'tcx>){
-        let alias_map = self.alias_map.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
-        // resolve lhs
-        let left = resolve_project(lhs);
-        // resolve rhs
-        match rhs{
-            Rvalue::Use(op) => {
-                match op{
-                    mir::Operand::Copy(p) => panic!("Mutex-related variables cannot be copied!"),
-                    mir::Operand::Move(p) => {
-                        let right = resolve_project(p);
-                        let right_var_set = &alias_map.get(&right).unwrap().1;
-                        let left_var = VariableNode::new(def_id.clone(), left);
-                        right_var_set.add_variable(left_var.clone());
-                        alias_map.update(left, (left_var, right_var_set.clone()));
-                    },
-                    mir::Operand::Constant(_) => panic!("Mutex should not be constant!"),
-                }
-            },
-            Rvalue::AddressOf(_, p) |
-            Rvalue::Ref(_, _, p) => {
-                let right = resolve_project(p);
-                let right_var_set = &alias_map.get(&right).unwrap().1;
-                let left_var = VariableNode::new(def_id.clone(), left);
-                right_var_set.add_variable(left_var.clone());
-                alias_map.update(left, (left_var, right_var_set.clone()));
-            },
-            Rvalue::Repeat(_, _) => todo!(),
-            Rvalue::ThreadLocalRef(_) => todo!(),
-            Rvalue::Len(_) => todo!(),
-            Rvalue::Cast(_, _, _) => (),
-            Rvalue::Discriminant(_) => todo!(),
-            Rvalue::Aggregate(_, _) => (), // TODO: 直接创建struct时
-            Rvalue::ShallowInitBox(_, _) => todo!(),
-            Rvalue::CopyForDeref(_) => todo!(),
-            _ => (),
-        }
-    }
-
-    pub fn get_ty(&self, def_id: &DefId, local_id: usize) -> Ty<'tcx>{
-        self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(local_id)].ty
-    }
-}
-
-// copied from rustc_mir_dataflow::storage::always_storage_live_locals
-// The set of locals in a MIR body that do not have `StorageLive`/`StorageDead` annotations.
-//
-// These locals have fixed storage for the duration of the body.
-use rustc_index::{bit_set::BitSet, IndexVec};
-use rustc_middle::mir::{self, Local};
-use rustc_target::abi::VariantIdx;
-pub fn always_storage_live_locals(body: &Body<'_>) -> BitSet<Local> {
-    let mut always_live_locals = BitSet::new_filled(body.local_decls.len());
-
-    for block in &*body.basic_blocks {
-        for statement in &block.statements {
-            use mir::StatementKind::{StorageDead, StorageLive};
-            if let StorageLive(l) | StorageDead(l) = statement.kind {
-                always_live_locals.remove(l);
+    fn print_alias(&self){
+        let mut grouped_map: FxHashMap<DefId, Vec<(usize, &FxHashMap<usize, (Rc<VariableNode>, Rc<AliasSet>)>)>> = FxHashMap::default();
+        for (def_id, value) in &self.alias_map {
+            for (key_usize, value) in value{
+                grouped_map
+                .entry(def_id.clone())
+                .or_insert_with(Vec::new)
+                .push((*key_usize, value));
             }
         }
+
+        println!("Alias facts: ");
+        for (def_id, mut vec) in grouped_map {
+            vec.sort_by_key(|k| k.0);
+            println!("{:?}:", def_id);
+            for (key_usize, value) in vec {
+                println!("bb {}   ", key_usize);
+                let mut v: Vec<&usize> = value.keys().collect();
+                v.sort();
+                for i in v{
+                    println!("variable {} -> {:?}", i, value[i]);
+                }
+            }
+            println!();
+        }
     }
 
-    always_live_locals
+    
+    fn print_lock_facts(&self){
+        let mut grouped_map: FxHashMap<DefId, Vec<(usize, &FxHashMap<usize, Rc<LockGuard>>)>> = FxHashMap::default();
+        for (def_id, value) in &self.lock_set_facts {
+            for (key_usize, value) in value{
+                grouped_map
+                .entry(def_id.clone())
+                .or_insert_with(Vec::new)
+                .push((*key_usize, value));
+            }
+        }
+
+        println!("Lock set facts: ");
+        for (def_id, mut vec) in grouped_map {
+            vec.sort_by_key(|k| k.0); // 按 usize 排序
+            println!("{:?}:", def_id);
+            for (key_usize, value) in vec {
+                println!("bb {} -> {:?}", key_usize, value);
+            }
+            println!();
+        }
+    }
 }
+
 
 /// whether a type is lock
 pub fn is_lock(ty: &Ty) -> bool{
