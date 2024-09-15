@@ -240,7 +240,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                     let left_var = VariableNode::new(def_id.clone(), left);
 
                                                     // update alias_map
-                                                    assert!(!alias_map.contains_key(&left));
+                                                    // assert!(!alias_map.contains_key(&left));
                                                     alias_map.update(left, (left_var.clone(), AliasSet::new_self(left_var)));
                                                 },
                                             }
@@ -282,7 +282,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                 let left = resolve_project(destination);
                                                 let left_var = VariableNode::new(def_id.clone(), left);
                                                 let right_var_set  = &alias_map.get(&right).unwrap().1;
-                                                assert!(!alias_map.contains_key(&left));
+                                                // assert!(!alias_map.contains_key(&left));
                                                 right_var_set.add_variable(left_var.clone());
                                                 alias_map.update(left, (left_var, right_var_set.clone()));
                                             },
@@ -301,7 +301,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                 let right_var_set  = &alias_map.get(&right).unwrap().1;
                                                 let left = resolve_project(&destination);
                                                 let left_var = VariableNode::new(def_id.clone(), left);
-                                                assert!(!alias_map.contains_key(&left));
+                                                // assert!(!alias_map.contains_key(&left));
                                                 right_var_set.add_variable(left_var.clone());
                                                 alias_map.update(left, (left_var, right_var_set.clone()));
                                             },

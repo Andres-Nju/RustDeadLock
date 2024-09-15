@@ -26,7 +26,7 @@ pub mod callgraph;
 pub mod lock;
 pub mod alias;
 pub mod fact;
-
+pub mod tools;
 pub struct LockSetAnalysis<'tcx>{
     tcx: TyCtxt<'tcx>, 
     call_graph: CallGraph<'tcx>,
@@ -172,23 +172,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                         match constant.ty().kind(){
                             rustc_type_ir::TyKind::FnDef(fn_id, _) => {
                                 // _* = func(args) -> [return: bb*, unwind: bb*] @ Call: FnDid: *
-                                // ^
-                                // |
-                                // This _* is always a variable/temp to receive the return value
-                                // i.e., do not need to resolve the projection of destination
-                                // interprocedural analysis just resolves the `func(args)` part, need to resolve the 
-                                // TODO: for those imported modules or functions which are available?
-                                // e.g., Mutex::new() is available for mir
-
-                                // TODO: first we model some function calls:
-                                // new, deref, clone ... 
-
-                                // if not available ==> 2 situations:
-                                // 1. the destination (i.e., return value) is an owned =>
-                                //    search the decls for it, and init a new owned node
-                                //    FIXME: if the destination is a smart pointer or struct?
-                                // 2. the destination is a reference =>
-                                // it must point to one of the args
+                                
                                 let def_path = self.tcx.def_path(fn_id.clone());
                                 let def_path_str = self.tcx.def_path_str(fn_id);
                                 let left = resolve_project(&destination);
@@ -293,67 +277,4 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 }
 
 
-/// whether a type is lock
-pub fn is_lock(ty: &Ty) -> bool{
-    // TODO: better logic
-    let ty = format!("{:?}", ty);
-    return ty.contains("Mutex") || ty.contains("Rwlock"); // TODO: RwLock
-}
-
-pub fn resolve_project(p: &Place) -> usize {
-    let mut cur = p.local.as_usize();
-    for projection in p.projection{
-        match &projection{ // TODO: complex types
-            mir::ProjectionElem::Deref => (),
-            mir::ProjectionElem::Field(_, _) => (),
-            mir::ProjectionElem::Index(_) => todo!(),
-            mir::ProjectionElem::ConstantIndex { offset, min_length, from_end } => todo!(),
-            mir::ProjectionElem::Subslice { from, to, from_end } => todo!(),
-            mir::ProjectionElem::Downcast(_, _) => todo!(),
-            mir::ProjectionElem::OpaqueCast(_) => todo!(),
-            mir::ProjectionElem::Subtype(_) => todo!(),
-        }
-    }
-    cur
-}
-
-pub fn is_primitive<'tcx>(ty: &Ty<'tcx>) -> bool{
-    match ty.kind() {
-        ty::Bool
-        | ty::Char
-        | ty::Int(_)
-        | ty::Uint(_)
-        | ty::Float(_) => true,
-        ty::Array(ref t,_) => is_primitive(t),
-        ty::Adt(_, ref args) => {
-            for t in args.types() {
-                if !is_primitive(&t) {
-                    return false;
-                }
-            }
-            true
-        },
-        ty::Tuple(ref tys) => {
-            for t in tys.iter() {
-                if !is_primitive(&t) {
-                    return false;
-                }
-            }
-            true
-        },
-        _ => false,
-    }
-}
-
-pub fn is_mutex_method(def_path: &String) -> bool{
-    def_path.starts_with("std::sync::Mutex")
-}
-
-pub fn is_smart_pointer(def_path: &String) -> bool{
-    def_path.starts_with("std::sync::Arc")
-}
-
-fn find_guard(lock_fact: &LockSetFact, id: usize){
-    
-}
 

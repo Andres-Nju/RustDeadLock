@@ -5,7 +5,10 @@ use std::thread;
 fn main() {
     let mutex = Arc::new(Mutex::new(0));
     let mutex_clone = Arc::clone(&mutex);
-    let mu1 = mutex.lock().unwrap();
+    for i in 1..10{
+        let mu1 = mutex.lock().unwrap();
+    }
+    
     get_lock(&mutex_clone);
 }
 
