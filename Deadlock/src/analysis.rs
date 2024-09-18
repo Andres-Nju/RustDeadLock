@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, fmt::format, rc::Rc, thread::current, usize};
 
-use fact::MapFact;
+use fact::{MapFact, SetFact, VecFact};
 use itertools::Itertools;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -10,8 +10,8 @@ use rustc_middle::{
     mir::{self, BasicBlock, BasicBlockData, BasicBlocks, HasLocalDecls, Local, LocalDecls, Place, Rvalue, Successors, TerminatorKind, VarDebugInfoContents}, 
     ty::{self, Ty, TyCtxt, TyKind}
 };
-use lock::{Lock, LockGuard, LockSetFact};
-use alias::{AliasAnalysis, AliasFact, AliasSet, LockObject, VariableNode};
+use lock::{LockFact, LockGuard, LockSetFact, LockSummary};
+use alias::{AliasFact, AliasSet, VariableNode};
 
 use rustc_middle::mir::{
     Location,
@@ -19,6 +19,7 @@ use rustc_middle::mir::{
     Statement,
     Terminator,
 };
+use tools::{is_guard, is_mutex_method, resolve_project};
 
 
 mod visitor;
@@ -27,19 +28,21 @@ pub mod lock;
 pub mod alias;
 pub mod fact;
 pub mod tools;
+
 pub struct LockSetAnalysis<'tcx>{
     tcx: TyCtxt<'tcx>, 
     call_graph: CallGraph<'tcx>,
     
     // whole-program data
     // a DefId + BasicBlock's index pair determines a bb
-    lock_set_facts: FxHashMap<DefId, FxHashMap<usize, LockSetFact>>,
+    lock_set_facts: FxHashMap<DefId, FxHashMap<usize, LockSummary>>,
 
     // alias_flow_graph: record the alias relationship for each function
     alias_map: FxHashMap<DefId, FxHashMap<usize, AliasFact>>,
 
     // the traversing order of bbs in each function
     control_flow_graph: FxHashMap<DefId, Vec<BasicBlock>>,
+
     // intra-analysis data
     // record all variable debug info in current function body
     // TODO: shadow nested scope
@@ -83,7 +86,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             for (index, basic_block_data) in self.tcx.optimized_mir(def_id).basic_blocks.iter().enumerate(){
                 if !basic_block_data.is_cleanup{
                     self.alias_map.get_mut(&def_id).unwrap().entry(index).or_insert(FxHashMap::default());
-                    self.lock_set_facts.get_mut(&def_id).unwrap().entry(index).or_insert(FxHashMap::default());
+                    self.lock_set_facts.get_mut(&def_id).unwrap().entry(index).or_insert(Vec::new());
                 }
             }
         }
@@ -147,24 +150,23 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         // merge the lock set
         let pre_lock_fact = self.lock_set_facts[&def_id][&pre.as_usize()].clone();
         self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().clear();
-        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().meet(pre_lock_fact);     
+        self.lock_set_facts.get_mut(&def_id).unwrap().get_mut(&bb_index).unwrap().meet(&pre_lock_fact);     
     }
 
     fn visit_terminator(&mut self, def_id: &DefId, bb_index: usize, terminator_kind: &TerminatorKind){
         let alias_map = self.alias_map.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
         match terminator_kind{ // TODO: if return a lock?
             rustc_middle::mir::TerminatorKind::Drop { place, target, .. } => {
-                // if drop a lock guard, find it/its alias and kill it in lock fact
+                // if drop a lock guard, query its aliases
                 let to_be_dropped = resolve_project(place);
+                if !is_guard(&self.get_ty(def_id, to_be_dropped)){
+                    return;
+                }
                 let lock_set_fact = self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
                 
                 // FIXME: drop all the alias may be unsound, if multiple locks are going to be dropped here
                 // Peahen only drops those variable which only points to one lock in the fact
-                for alias in self.alias_map.get(def_id).unwrap().get(&bb_index).unwrap().get(&to_be_dropped).unwrap().1.variables.borrow().iter(){
-                    if lock_set_fact.contains_key(&alias.index){
-                        lock_set_fact.remove(&alias.index);
-                    }
-                }
+                
             },
             rustc_middle::mir::TerminatorKind::Call { func, args, destination, target, unwind, call_source, fn_span } => {
                 match func{
@@ -187,8 +189,9 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 mir::Operand::Move(p) => {
                                                     let right =  resolve_project(p);
                                                     // update the lock set facts
+                                                    // get all the possible locks right might point to
                                                     let lock_set_fact = self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap();
-                                                    lock_set_fact.update(left, LockGuard::new(left, LockObject::new(right)));
+                                                    // lock_set_fact.update()
                                                 },
                                             }
                                         }
@@ -254,7 +257,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 
     
     fn print_lock_facts(&self){
-        let mut grouped_map: FxHashMap<DefId, Vec<(usize, &FxHashMap<usize, Rc<LockGuard>>)>> = FxHashMap::default();
+        let mut grouped_map: FxHashMap<DefId, Vec<(usize, &Vec<FxHashSet<Rc<LockFact>>>)>> = FxHashMap::default();
         for (def_id, value) in &self.lock_set_facts {
             for (key_usize, value) in value{
                 grouped_map
@@ -266,7 +269,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 
         println!("Lock set facts: ");
         for (def_id, mut vec) in grouped_map {
-            vec.sort_by_key(|k| k.0); // 按 usize 排序
+            vec.sort_by_key(|k| k.0); 
             println!("{:?}:", def_id);
             for (key_usize, value) in vec {
                 println!("bb {} -> {:?}", key_usize, value);

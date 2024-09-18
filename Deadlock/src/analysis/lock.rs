@@ -2,8 +2,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::hash::{Hash, Hasher};
 use rustc_hash::{FxHashMap, FxHashSet};
-
-use super::alias::LockObject;
+use rustc_hir::def_id::DefId;
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Mutex {}
@@ -13,64 +12,55 @@ pub struct RwLock{
     pub is_write: bool,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum Lock{
-    Mutex(Mutex),
-    RwLock(RwLock),
-}
 
 #[derive(Debug, Clone)]
 pub struct LockGuard{
+    pub def_id: DefId,
     pub index: usize, 
-    pub lock: Rc<LockObject>,
+    pub possible_locks: FxHashSet<Rc<LockObject>>,
 }
 
 impl PartialEq for LockGuard{
     fn eq(&self, other: &Self) -> bool {
-        self.index == other.index && self.lock == other.lock
+        self.def_id == other.def_id && self.index == other.index
     }
 }
 
-impl Mutex {
-    pub fn new() -> Self {
-        Self {}
-    }
+// FIXME: the Hash may be not correct
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+pub struct LockFact{
+    lock: Rc<LockObject>,
+    is_acquisation: bool,
+    location: usize,
+    state: bool,
 }
 
-impl RwLock {
-    pub fn new(is_write: bool) -> Self {
-        Self {
-            is_write
-        }
-    }
-
-}
-
-impl Lock{
-    pub fn new_mutex() -> Self{
-        Lock::Mutex(Mutex::new())
-    }
-
-    pub fn new_rwlock(is_write: bool) -> Self{
-        Lock::RwLock(RwLock::new(is_write))
-    }
-}
-
-pub type LockSetFact = FxHashMap<usize, Rc<LockGuard>>;
-
-impl LockGuard{
-    pub fn new(index: usize, lock: Rc<LockObject>) -> Rc<Self> {
-        Rc::new(LockGuard{
-            index,
-            lock
+impl LockFact{
+    pub fn new(lock: Rc<LockObject>, is_acquisation: bool, location: usize, state: bool) -> Rc<Self>{
+        Rc::new(LockFact { 
+            lock, 
+            is_acquisation, 
+            location, 
+            state,
         })
     }
+}
 
-    pub fn index(&self) -> usize{
-        self.index
+pub type LockSetFact = FxHashSet<Rc<LockFact>>;
+pub type LockSummary = Vec<LockSetFact>;
+
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+pub struct LockObject {
+    pub def_id: DefId,
+    pub id: usize,
+}
+
+impl LockObject {
+    pub fn new(def_id: DefId, id: usize) -> Rc<Self> {
+        Rc::new(LockObject {def_id,  id })
     }
 
-    pub fn lock(&self) -> &LockObject{
-        &self.lock
+    pub fn id(&self) -> usize{
+        self.id
     }
 }

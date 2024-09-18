@@ -7,8 +7,11 @@ use rustc_hir::{def_id::{DefId, LocalDefId}, definitions::DefPathData};
 use rustc_middle::{mir::{self, BasicBlock, Body, HasLocalDecls, Local, LocalDecls, Place, Rvalue, Statement, TerminatorKind}, ty::{Ty, TyCtxt}};
 use rustc_span::sym::call;
 
-use super::{callgraph::CallGraph, fact::MapFact, is_mutex_method, is_smart_pointer, resolve_project};
+use super::{callgraph::CallGraph, fact::MapFact, tools::{is_mutex_method, is_smart_pointer, resolve_project}};
 pub type AliasFact = FxHashMap<usize, (Rc<VariableNode>, Rc<AliasSet>)>;
+
+pub mod graph;
+pub mod node;
 
 
 pub struct AliasAnalysis<'tcx>{
@@ -192,23 +195,6 @@ impl<'tcx> AliasAnalysis<'tcx> {
                         match constant.ty().kind(){
                             rustc_type_ir::TyKind::FnDef(fn_id, _) => {
                                 // _* = func(args) -> [return: bb*, unwind: bb*] @ Call: FnDid: *
-                                // ^
-                                // |
-                                // This _* is always a variable/temp to receive the return value
-                                // i.e., do not need to resolve the projection of destination
-                                // interprocedural analysis just resolves the `func(args)` part, need to resolve the 
-                                // TODO: for those imported modules or functions which are available?
-                                // e.g., Mutex::new() is available for mir
-
-                                // TODO: first we model some function calls:
-                                // new, deref, clone ... 
-
-                                // if not available ==> 2 situations:
-                                // 1. the destination (i.e., return value) is an owned =>
-                                //    search the decls for it, and init a new owned node
-                                //    FIXME: if the destination is a smart pointer or struct?
-                                // 2. the destination is a reference =>
-                                // it must point to one of the args
                                 let def_path = self.tcx.def_path(fn_id.clone());
                                 let def_path_str = self.tcx.def_path_str(fn_id);
                                 let left = resolve_project(&destination);
@@ -223,7 +209,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                 mir::Operand::Constant(_) |
                                                 mir::Operand::Move(_) => {
                                                     let left_var = VariableNode::new(def_id.clone(), left);
-                                                    assert!(!alias_map.contains_key(&left));
+                                                    // assert!(!alias_map.contains_key(&left));
                                                     alias_map.update(left, (left_var.clone(), AliasSet::new_self(left_var)));
                                                 },
                                             }
@@ -259,7 +245,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                     let right = resolve_project(p);
                                                     let right_var_set = &alias_map.get(&right).unwrap().1;
                                                     let left_var = VariableNode::new(def_id.clone(), left);
-                                                    assert!(!alias_map.contains_key(&left));
+                                                    // assert!(!alias_map.contains_key(&left));
                                                     right_var_set.add_variable(left_var.clone());
                                                     alias_map.update(left, (left_var, right_var_set.clone()));
                                                 },
@@ -319,7 +305,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                 let right_var_set  = &alias_map.get(&right).unwrap().1;
                                                 let left = resolve_project(&destination);
                                                 let left_var = VariableNode::new(def_id.clone(), left);
-                                                assert!(!alias_map.contains_key(&left));
+                                                // assert!(!alias_map.contains_key(&left));
                                                 right_var_set.add_variable(left_var.clone());
                                                 alias_map.update(left, (left_var, right_var_set.clone()));
                                             },
@@ -413,20 +399,7 @@ pub fn is_lock(ty: &Ty) -> bool{
 
 
 
-#[derive(Debug, Eq, PartialEq, Hash, Clone)]
-pub struct LockObject {
-    pub id: usize,
-}
 
-impl LockObject {
-    pub fn new(id: usize) -> Rc<Self> {
-        Rc::new(LockObject { id })
-    }
-
-    pub fn id(&self) -> usize{
-        self.id
-    }
-}
 
 impl fmt::Debug for AliasSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

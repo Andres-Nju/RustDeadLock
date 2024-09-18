@@ -1,19 +1,9 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 fn main(){
-    let a = Mutex::new(123);
-    // println!("{:?}", a);
-    let b = Mutex::new(24);
-    let a1 = a.lock().unwrap();
-    let b1 = b.lock().unwrap();
-    let c;
-    if true{
-        c = a1;
-    }
-    else{
-        c = b1;
-    }
-    println!("{:?}", c);
-    tt(&a);
+    let mutex1 = Arc::new(Mutex::new(0));
+let mutex2 = mutex1.clone();
+mutex1.lock().unwrap();
+mutex2.lock().unwrap();
 }
 
 fn tt(b: &Mutex<i32>){
