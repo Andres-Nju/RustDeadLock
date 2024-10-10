@@ -12,22 +12,6 @@ pub fn is_lock(ty: &Ty) -> bool{
     return ty.contains("Mutex") || ty.contains("Rwlock"); // TODO: RwLock
 }
 
-pub fn resolve_project(p: &Place) -> usize {
-    let mut cur = p.local.as_usize();
-    for projection in p.projection{
-        match &projection{ // TODO: complex types
-            mir::ProjectionElem::Deref => (),
-            mir::ProjectionElem::Field(_, _) => (),
-            mir::ProjectionElem::Index(_) => todo!(),
-            mir::ProjectionElem::ConstantIndex { offset, min_length, from_end } => todo!(),
-            mir::ProjectionElem::Subslice { from, to, from_end } => todo!(),
-            mir::ProjectionElem::Downcast(_, _) => todo!(),
-            mir::ProjectionElem::OpaqueCast(_) => todo!(),
-            mir::ProjectionElem::Subtype(_) => todo!(),
-        }
-    }
-    cur
-}
 
 pub fn is_primitive<'tcx>(ty: &Ty<'tcx>) -> bool{
     match ty.kind() {
