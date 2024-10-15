@@ -16,11 +16,11 @@ pub struct AliasGraph{
 
 impl Drop for AliasGraph{
     fn drop(&mut self) {  
-        for &node_ptr in self.nodes.iter() {
-            unsafe {
-                drop(Box::from_raw(node_ptr));
-            }
-        }
+        // for &node_ptr in self.nodes.iter() {
+        //     unsafe {
+        //         drop(Box::from_raw(node_ptr));
+        //     }
+        // }
     }
 }
 
@@ -36,8 +36,8 @@ impl AliasGraph{
         self.node_map.get(&(val as *const _)).copied()
     }
 
-    pub fn add_node(&mut self, id: GraphNodeId, name: Option<String>) -> *mut AliasGraphNode {
-        let node_ptr = AliasGraphNode::new(id, name);
+    pub fn add_node(&mut self, id: GraphNodeId) -> *mut AliasGraphNode {
+        let node_ptr = AliasGraphNode::new(id);
         self.nodes.insert(node_ptr);
         self.node_map.insert(node_ptr as *const AliasGraphNode, node_ptr);
         node_ptr
@@ -53,10 +53,12 @@ impl AliasGraph{
                 return node_x;
             }
 
-            // Ensure node_x has the higher degree
-            if (*node_x).degree() < (*node_y).degree() {
-                std::mem::swap(&mut node_x, &mut node_y);
-            }
+            // // Ensure node_x has the higher degree
+            // if (*node_x).degree() < (*node_y).degree() {
+            //     let t = node_x;
+            //     node_x = node_y;
+            //     node_y = t;
+            // }
 
             // Merge NodeY's outgoing labels and targets into NodeX
             let y_out_labels = &*(*node_y).out_labels;
@@ -71,15 +73,15 @@ impl AliasGraph{
 
             // Move NodeY's outgoing vertices to NodeX
             for label in y_out_labels.iter() {
-                if let Some(out_vertices) = (*(*node_y).successors).get(label) {
-                    for w in (**out_vertices).iter() {
+                if let Some(out_vertices) = (*node_y).get_out_vertices(*label) {
+                    for w in (*out_vertices).iter() {
                         if !(*node_x).contains_target(*w, *label) {
                             (*node_x).add_target(*w, *label);
                         }
                         // Modify safely without affecting the iterator
                         let w_temp = *w;
-                        (*(*node_y).successors).get_mut(label).unwrap().remove(&w_temp);
-                        (*w_temp).get_in_vertices(*label).unwrap().remove(&node_y);
+                        (*out_vertices).remove(w);
+                        (*(*w_temp).get_in_vertices(*label).unwrap()).remove(&node_y);
                     }
                 }
             }
@@ -87,28 +89,28 @@ impl AliasGraph{
             // Merge NodeY's incoming vertices into NodeX
             let y_in_labels = &*(*node_y).in_labels;
             for label in y_in_labels.iter() {
-                if let Some(in_vertices) = (*(*node_y).predecessors).get(label) {
-                    for w in in_vertices.iter() {
-                        if !(*w).contains_target(node_x, *label) {
-                            (*w).add_target(node_x, *label);
+                if let Some(in_vertices) = (*node_y).get_in_vertices(*label) {
+                    for w in (*in_vertices).iter() {
+                        if !(**w).contains_target(node_x, *label) {
+                            (**w).add_target(node_x, *label);
                         }
                         let w_temp = *w;
-                        (*(*node_y).predecessors).get_mut(label).unwrap().remove(&w_temp);
-                        (*w_temp).get_out_vertices(*label).unwrap().remove(&node_y);
+                        (*in_vertices).remove(w);
+                        (*(*w_temp).get_out_vertices(*label).unwrap()).remove(&node_y);
                     }
                 }
             }
 
             // Move equivalence class of NodeY to NodeX
             let vals = (*node_y).get_alias_set();
-            for &val in vals.iter() {
+            for &val in (*vals).iter() {
                 self.node_map.insert(val as *const _, node_x);
             }
             (*node_y).mv_alias_set_to(node_x);
 
             // Remove NodeY from the graph and delete it
             self.nodes.remove(&node_y);
-            drop(Box::from_raw(node_y)); // Safe deletion of NodeY
+            // drop(Box::from_raw(node_y)); // Safe deletion of NodeY
 
             node_x
         }
@@ -150,11 +152,16 @@ impl AliasGraph{
         }
     }
     pub fn print_graph(&self) {
+        println!("node map:");
+        for (key, val) in self.node_map.iter(){
+            unsafe{
+                println!("  {:?} --> {:?}", **key, **val);
+            }
+        }
         for &node_ptr in &self.nodes {
             unsafe {
                 let node = &*node_ptr;
-                println!("Node ID: {:?}", node.id);
-                println!("  Name: {:?}", node.name);
+                println!("Node ID: {:?}", *node.id);
                     
                 // print alias_set
                 println!("  Alias Set:");
@@ -162,7 +169,7 @@ impl AliasGraph{
                     let alias_set = &*node.alias_set;
                     for &alias in alias_set.iter() {
                         let alias_node = &*alias;
-                        println!("    - Node ID: {:?}", alias_node.id);
+                        println!("    - Node ID: {:?}", *alias_node.id);
                     }
                 }
 
@@ -192,7 +199,7 @@ impl AliasGraph{
                         println!("    - Label: {:?}", **label);
                         for &successor in &**successors_set {
                             let successor_node = &*successor; 
-                            println!("      - Node ID: {:?}", successor_node.id);
+                            println!("      - Node ID: {:?}", *successor_node.id);
                         }
                     }
                 }
@@ -205,7 +212,7 @@ impl AliasGraph{
                         println!("    - Label: {:?}", **label);
                         for &predecessor in &**predecessors_set {
                             let predecessor_node = &*predecessor; 
-                            println!("      - Node ID: {:?}", predecessor_node.id);
+                            println!("      - Node ID: {:?}", *predecessor_node.id);
                         }
                     }
                 }
@@ -225,8 +232,8 @@ mod tests{
         let mut graph = AliasGraph::new();
     
         // add 2 nodes
-        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20), Some("Node 1".to_string()));
-        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21), Some("Node 2".to_string()));
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21));
         
         unsafe {
             let label1 = Box::into_raw(Box::new(EdgeLabel::Deref));
@@ -256,8 +263,8 @@ mod tests{
         let mut graph = AliasGraph::new();
     
         // add 2 nodes
-        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20), Some("Node 1".to_string()));
-        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21), Some("Node 2".to_string()));
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21));
         
         unsafe {
             // move node1's set into node2
@@ -273,5 +280,26 @@ mod tests{
             println!("test2 ");
             graph.print_graph();
         }
+    }
+
+    #[test]
+    fn test_combine(){
+        let mut graph = AliasGraph::new();
+    
+        // add 2 nodes
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21));
+        let node3 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(3)), 22));
+    
+        unsafe{
+            let label1 = Box::into_raw(Box::new(EdgeLabel::Deref));
+            (*node1).add_target(node2, label1);
+            let label2 = Box::into_raw(Box::new(EdgeLabel::Guard));
+            (*node2).add_target(node1, label2);
+            graph.print_graph();
+        }
+        println!("Combine node1 into node3\n");
+        graph.combine(node3, node1);
+        graph.print_graph();
     }
 }

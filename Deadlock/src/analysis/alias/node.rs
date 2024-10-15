@@ -5,8 +5,8 @@ use rustc_hir::def_id::DefId;
 
 
 pub struct AliasGraphNode{
-    pub id: GraphNodeId,
-    pub name: Option<String>,
+    pub id: *mut GraphNodeId,
+    // pub name: Option<*const String>,
 
     pub alias_set: *mut FxHashSet<*mut AliasGraphNode>,
     
@@ -21,11 +21,13 @@ pub struct AliasGraphNode{
 
 impl Debug for AliasGraphNode{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AliasGraphNode").field("id", &self.id).field("name", &self.name).finish()
+        unsafe{
+            f.debug_struct("AliasGraphNode").field("id", &*self.id).finish()
+        }
     }
 }
 impl AliasGraphNode{
-    pub fn new(id: GraphNodeId, name: Option<String>) -> *mut AliasGraphNode {
+    pub fn new(id: GraphNodeId) -> *mut AliasGraphNode {
         let alias_set = Box::new(FxHashSet::default());
         let out_labels = Box::new(FxHashSet::default());
         let in_labels = Box::new(FxHashSet::default());
@@ -33,8 +35,7 @@ impl AliasGraphNode{
         let predecessors = Box::new(FxHashMap::default());
 
         let node = Box::into_raw(Box::new(AliasGraphNode {
-            id,
-            name,
+            id: Box::into_raw(Box::new(id)),
             alias_set: Box::into_raw(alias_set),
             out_labels: Box::into_raw(out_labels),
             in_labels: Box::into_raw(in_labels),
@@ -48,10 +49,10 @@ impl AliasGraphNode{
         node
     }
 
-    // Get the node's name
-    pub fn get_name(&self) -> &Option<String> {
-        &self.name
-    }
+    // // Get the node's name
+    // pub fn get_name(&self) -> &Option<String> {
+    //     &self.name
+    // }
 
     // Get the number of outgoing vertices for a given label
     pub fn out_num_vertices(&self, label: *mut EdgeLabel) -> usize {
@@ -142,29 +143,29 @@ impl AliasGraphNode{
         }
     }
 
-    // Get a unique incoming vertex for a label, if exists
-    pub fn get_in_vertex(&self, label: *mut EdgeLabel) -> Option<*mut AliasGraphNode> {
-        unsafe {
-            let set = self.get_in_vertices(label)?;
-            if (*set).len() == 1 {
-                (*set).iter().next().copied() // Copy the raw pointer
-            } else {
-                None
-            }
-        }
-    }
+    // // Get a unique incoming vertex for a label, if exists
+    // pub fn get_in_vertex(&self, label: *mut EdgeLabel) -> Option<*mut AliasGraphNode> {
+    //     unsafe {
+    //         let set = self.get_in_vertices(label)?;
+    //         if (*set).len() == 1 {
+    //             (*set).iter().next().copied() // Copy the raw pointer
+    //         } else {
+    //             None
+    //         }
+    //     }
+    // }
 
-    // Get a unique outgoing vertex for a label, if exists
-    pub fn get_out_vertex(&self, label: *mut EdgeLabel) -> Option<*mut AliasGraphNode> {
-        unsafe {
-            let set = self.get_out_vertices(label)?;
-            if (*set).len() == 1 {
-                (*set).iter().next().copied() // Copy the raw pointer
-            } else {
-                None
-            }
-        }
-    }
+    // // Get a unique outgoing vertex for a label, if exists
+    // pub fn get_out_vertex(&self, label: *mut EdgeLabel) -> Option<*mut AliasGraphNode> {
+    //     unsafe {
+    //         let set = self.get_out_vertices(label)?;
+    //         if (*set).len() == 1 {
+    //             (*set).iter().next().copied() // Copy the raw pointer
+    //         } else {
+    //             None
+    //         }
+    //     }
+    // }
 
      // Returns a reference to the alias set
      pub fn get_alias_set(&self) -> *mut FxHashSet<*mut AliasGraphNode> {
@@ -212,7 +213,9 @@ impl AliasGraphNode{
 
 impl Drop for AliasGraphNode {
     fn drop(&mut self) {
+        println!("drop the node");
         unsafe {
+            drop(Box::from_raw(self.id));
             if !self.out_labels.is_null() {
                 let out_labels_set = Box::from_raw(self.out_labels);
                 for &label_ptr in out_labels_set.iter() {
@@ -237,7 +240,7 @@ impl AliasGraphNode {
     pub fn print_node(&self) {
         unsafe {
             // print current node id
-            println!("node id: {:?}", self.id);
+            println!("node id: {:?}", *self.id);
 
             // print alias set
             println!("  alias set:");
@@ -253,9 +256,8 @@ impl AliasGraphNode {
                 for &successor in (**successors).iter() {
                     let successor_node = &*successor; // Dereference successor node
                     let label_str = &**label; // Dereference to get the label value
-                    let node_id = &self.id;
                     let succ_id = &successor_node.id;
-                    println!("      self --{:?}--> {:?}", label_str, succ_id);
+                    println!("      self --{:?}--> {:?}", label_str, **succ_id);
                 }
             }
 
@@ -268,9 +270,8 @@ impl AliasGraphNode {
                 for &predecessor in (**predecessors).iter() {
                     let predecessor_node = &*predecessor; // Dereference successor node
                     let label_str = &**label; // Dereference to get the label value
-                    let node_id = &self.id;
                     let pre_id = &predecessor_node.id;
-                    println!("      {:?} --{:?}--> self", pre_id, label_str);
+                    println!("      {:?} --{:?}--> self", **pre_id, label_str);
                 }
             }
         }

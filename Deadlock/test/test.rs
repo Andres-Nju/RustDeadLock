@@ -1,12 +1,11 @@
-struct A<'a>{
-    a: &'a B
-}
 
-struct B{
-    b: i32
+
+struct A{
+    a: i32
 }
 
 fn main(){
-    let a = Box::new(123);
-    let b = *a;
+    let a = A{a: 10};
+    let b = &a;
+    let c = (*b).a;
 }
