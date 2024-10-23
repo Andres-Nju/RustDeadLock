@@ -273,7 +273,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
 
     }
 
-    fn make_alias(&mut self, node_x: Rc<AliasGraphNode>, node_y: Rc<AliasGraphNode>){
-        
+    fn make_alias(&mut self, node_x: *mut AliasGraphNode, node_y: *mut AliasGraphNode) -> *mut AliasGraphNode{
+        self.alias_graph.combine(node_x, node_y)
     }
 }

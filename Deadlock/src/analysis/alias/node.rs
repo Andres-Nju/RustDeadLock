@@ -6,7 +6,7 @@ use rustc_hir::def_id::DefId;
 
 pub struct AliasGraphNode{
     pub id: *mut GraphNodeId,
-    // pub name: Option<*const String>,
+    pub name: Option<String>,
 
     pub alias_set: *mut FxHashSet<*mut AliasGraphNode>,
     
@@ -22,12 +22,12 @@ pub struct AliasGraphNode{
 impl Debug for AliasGraphNode{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         unsafe{
-            f.debug_struct("AliasGraphNode").field("id", &*self.id).finish()
+            f.debug_struct("AliasGraphNode").field("id", &*self.id).field("name", &self.name).finish()
         }
     }
 }
 impl AliasGraphNode{
-    pub fn new(id: GraphNodeId) -> *mut AliasGraphNode {
+    pub fn new(id: GraphNodeId, name: Option<String>) -> *mut AliasGraphNode {
         let alias_set = Box::new(FxHashSet::default());
         let out_labels = Box::new(FxHashSet::default());
         let in_labels = Box::new(FxHashSet::default());
@@ -36,6 +36,7 @@ impl AliasGraphNode{
 
         let node = Box::into_raw(Box::new(AliasGraphNode {
             id: Box::into_raw(Box::new(id)),
+            name,
             alias_set: Box::into_raw(alias_set),
             out_labels: Box::into_raw(out_labels),
             in_labels: Box::into_raw(in_labels),

@@ -6,7 +6,7 @@ use rustc_middle::mir::{self, Place};
 
 use crate::analysis::alias::node::EdgeLabel;
 
-use super::node::{AliasGraphNode, GraphNodeId};
+use super::node::{self, AliasGraphNode, GraphNodeId};
 
 
 pub struct AliasGraph{
@@ -36,11 +36,25 @@ impl AliasGraph{
         self.node_map.get(&(val as *const _)).copied()
     }
 
-    pub fn add_node(&mut self, id: GraphNodeId) -> *mut AliasGraphNode {
-        let node_ptr = AliasGraphNode::new(id);
+    pub fn add_node(&mut self, id: GraphNodeId, name: Option<String>) -> *mut AliasGraphNode {
+        let node_ptr = AliasGraphNode::new(id, name);
         self.nodes.insert(node_ptr);
         self.node_map.insert(node_ptr as *const AliasGraphNode, node_ptr);
         node_ptr
+    }
+
+    pub fn get_or_insert_node(&mut self, id: GraphNodeId, name: Option<String>) -> *mut AliasGraphNode {
+        let node_ptr = AliasGraphNode::new(id, name);
+        match self.node_map.get(&(node_ptr as *const _)){
+            Some(ptr) => {
+                *ptr
+            }
+            None => {
+                self.nodes.insert(node_ptr);
+                self.node_map.insert(node_ptr as *const AliasGraphNode, node_ptr);
+                node_ptr
+            }
+        }
     }
 
     // Combine two nodes into one, merging NodeY into NodeX
@@ -116,32 +130,33 @@ impl AliasGraph{
         }
     }
 
-    // pub fn resolve_project(&mut self, def_id: &DefId, p: &Place) -> Rc<AliasGraphNode> {
-    //     let mut cur_node_id = GraphNodeId::new(def_id.clone(), p.local.as_usize());
-    //     let mut cur_node = self.get_or_insert_node(cur_node_id);
-    //     println!("{:?}: {:?}", p.local, p.projection);
-    //     for projection in p.projection{
-    //         match &projection{ // TODO: complex types
-    //             mir::ProjectionElem::Deref => {
-    //                 let deref_set = cur_node.get_predecessors_by_label(&EdgeLabel::Deref);
-    //                 if let Some(deref_set) = deref_set{
-                        
-    //                 }
-    //                 else{
-    //                     panic!("There is no deref target for {:?}", cur_node);
-    //                 }
-    //             },
-    //             mir::ProjectionElem::Field(_, _) => (),
-    //             mir::ProjectionElem::Index(_) => todo!(),
-    //             mir::ProjectionElem::ConstantIndex { .. } => todo!(),
-    //             mir::ProjectionElem::Subslice { .. } => todo!(),
-    //             mir::ProjectionElem::Downcast(_, _) => todo!(),
-    //             mir::ProjectionElem::OpaqueCast(_) => todo!(),
-    //             mir::ProjectionElem::Subtype(_) => todo!(),
-    //         }
-    //     }
-    //     cur_node
-    // }
+    pub fn resolve_project(&mut self, def_id: &DefId, p: &Place) -> FxHashSet<*mut AliasGraphNode> {
+        unsafe{
+            let mut cur_node_id = GraphNodeId::new(def_id.clone(), p.local.as_usize());
+            let cur_node = self.get_or_insert_node(cur_node_id, None);
+
+            for projection in p.projection{
+                match &projection{ // TODO: complex types
+                    mir::ProjectionElem::Deref => {
+                        if let Some(targets) = (*cur_node).get_out_vertices(&mut EdgeLabel::Deref as *mut _){
+
+                        }
+                        else{
+                            
+                        }
+                    },
+                    mir::ProjectionElem::Field(_, _) => (),
+                    mir::ProjectionElem::Index(_) => todo!(),
+                    mir::ProjectionElem::ConstantIndex { .. } => todo!(),
+                    mir::ProjectionElem::Subslice { .. } => todo!(),
+                    mir::ProjectionElem::Downcast(_, _) => todo!(),
+                    mir::ProjectionElem::OpaqueCast(_) => todo!(),
+                    mir::ProjectionElem::Subtype(_) => todo!(),
+                }
+            }
+            FxHashSet::default()
+        }
+    }
 
     pub fn print(&self){
         for &node_ptr in &self.nodes{
@@ -232,8 +247,8 @@ mod tests{
         let mut graph = AliasGraph::new();
     
         // add 2 nodes
-        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20));
-        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21));
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20), Some(String::from("node1")));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21), Some(String::from("node2")));
         
         unsafe {
             let label1 = Box::into_raw(Box::new(EdgeLabel::Deref));
@@ -263,8 +278,8 @@ mod tests{
         let mut graph = AliasGraph::new();
     
         // add 2 nodes
-        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20));
-        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21));
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20), Some(String::from("node1")));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21), Some(String::from("node2")));
         
         unsafe {
             // move node1's set into node2
@@ -287,9 +302,9 @@ mod tests{
         let mut graph = AliasGraph::new();
     
         // add 2 nodes
-        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20));
-        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21));
-        let node3 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(3)), 22));
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20), Some(String::from("node1")));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21), Some(String::from("node2")));
+        let node3 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(3)), 22), Some(String::from("node3")));
     
         unsafe{
             let label1 = Box::into_raw(Box::new(EdgeLabel::Deref));
