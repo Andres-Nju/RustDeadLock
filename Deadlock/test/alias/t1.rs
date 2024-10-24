@@ -7,6 +7,7 @@ fn main() {
     // *y = 30;        // 错误: 不允许通过不可变引用修改x
 
     // Check the values by adding assertions or other checks
+    tt();
 }
 
 

@@ -1,7 +1,27 @@
-use std::{cell::{Ref, RefCell, RefMut}, fmt::Debug, rc::Rc};
+use std::{cell::{Ref, RefCell, RefMut}, fmt::Debug, sync::Mutex};
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::def_id::DefId;
+use lazy_static::lazy_static;
+lazy_static!{
+    static ref LOCAL_INDEX: Mutex<usize> = Mutex::new(0);
+}
+
+pub fn next_local_id() -> usize {
+    let mut id = LOCAL_INDEX.lock().unwrap();
+    *id += 1;
+    *id
+}
+
+pub fn get_local_id() -> usize {
+    let id = LOCAL_INDEX.lock().unwrap();
+    *id
+}
+
+pub fn reset_local_id() {
+    let mut id = LOCAL_INDEX.lock().unwrap();
+    *id = 0;
+}
 
 
 pub struct AliasGraphNode{
@@ -287,10 +307,10 @@ pub struct GraphNodeId{
 }
 
 impl GraphNodeId{
-    pub fn new(def_id: DefId, index: usize) -> Self{
+    pub fn new(def_id: DefId) -> Self{
         GraphNodeId{
             def_id,
-            index,
+            index: next_local_id(),
         }
     }
 }

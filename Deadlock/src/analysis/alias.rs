@@ -2,7 +2,7 @@
 use std::rc::Rc;
 
 use graph::AliasGraph;
-use node::AliasGraphNode;
+use node::{AliasGraphNode, EdgeLabel};
 use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::{def_id::{DefId, LocalDefId}, definitions::DefPathData};
 use rustc_middle::{mir::{self, BasicBlock, Body, HasLocalDecls, Local, LocalDecls, Place, Rvalue, Statement, TerminatorKind}, ty::{Ty, TyCtxt}};
@@ -46,7 +46,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
     } 
 
     fn after_run(&self){
-
+        self.alias_graph.print();
     }
 
     fn init_func(&mut self, def_id: &DefId, body: &Body){
@@ -126,7 +126,9 @@ impl<'tcx> AliasAnalysis<'tcx> {
                     mir::Operand::Move(p) => {
                         self.visit_copy_or_move(def_id, lhs, p);
                     },
-                    mir::Operand::Constant(_) => (),
+                    mir::Operand::Constant(_) => {
+                        self.visit_constant(def_id, lhs);
+                    },
                 }
             },
             Rvalue::AddressOf(_, p) |
@@ -147,12 +149,22 @@ impl<'tcx> AliasAnalysis<'tcx> {
         }
     }
 
-    fn visit_copy_or_move(&mut self, def_id: &DefId, lhs: &Place, rhs: &Place){
+    fn visit_constant(&mut self, def_id: &DefId, lhs: &Place){
+        self.alias_graph.resolve_project(def_id, lhs);
+    }
 
+    fn visit_copy_or_move(&mut self, def_id: &DefId, lhs: &Place, rhs: &Place){
+        let node_x = self.alias_graph.resolve_project(def_id, lhs);
+        let node_y = self.alias_graph.resolve_project(def_id, rhs);
+        self.make_alias(node_x, node_y);
     }
 
     fn visit_address_of_or_ref(&mut self, def_id: &DefId, lhs: &Place, rhs: &Place){
-
+        let node_x = self.alias_graph.resolve_project(def_id, lhs);
+        let node_y = self.alias_graph.resolve_project(def_id, rhs);
+        unsafe {
+            (*node_x).add_target(node_y, Box::into_raw(Box::new(EdgeLabel::Deref)));
+        }
     }
     
     fn visit_terminator(&mut self, def_id: &DefId, bb_index: usize, terminator_kind: &TerminatorKind){

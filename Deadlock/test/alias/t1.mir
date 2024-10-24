@@ -1,0 +1,28 @@
+DefId(0:3 ~ t1[fdd8]::main)
+_0:  @ () 
+_1:  @ i32 
+_2:  @ &ReErased i32 
+
+[x => const 10_i32, y => _2, z => _2]
+bb 0 {
+CleanUp: false
+    Assign((_1, const 10_i32)) @ _1=const 10_i32 @ Use
+    Assign((_2, &_1)) @ _2=&_1 @ RefThe type is []
+    return @ Return
+}
+
+DefId(0:4 ~ t1[fdd8]::tt)
+_0:  @ () 
+_1:  @ i32 
+_2:  @ i32 
+_3:  @ &ReErased i32 
+
+[a => _1, b => const 10_i32, c => _3]
+bb 0 {
+CleanUp: false
+    Assign((_1, const 5_i32)) @ _1=const 5_i32 @ Use
+    Assign((_2, const 10_i32)) @ _2=const 10_i32 @ Use
+    Assign((_3, &_1)) @ _3=&_1 @ RefThe type is []
+    Assign((_1, _2)) @ _1=_2 @ Use CopyThe type is []
+    return @ Return
+}

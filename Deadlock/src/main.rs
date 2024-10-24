@@ -4,6 +4,7 @@
 extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
+extern crate lazy_static;
 
 extern crate rustc_ast_pretty;
 extern crate rustc_driver;

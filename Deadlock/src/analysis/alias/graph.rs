@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt::format, rc::Rc, thread::current};
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::def_id::DefId;
@@ -36,8 +36,8 @@ impl AliasGraph{
         self.node_map.get(&(val as *const _)).copied()
     }
 
-    pub fn add_node(&mut self, id: GraphNodeId, name: Option<String>) -> *mut AliasGraphNode {
-        let node_ptr = AliasGraphNode::new(id, name);
+    pub fn add_node(&mut self, id: GraphNodeId) -> *mut AliasGraphNode {
+        let node_ptr = AliasGraphNode::new(id);
         self.nodes.insert(node_ptr);
         self.node_map.insert(node_ptr as *const AliasGraphNode, node_ptr);
         node_ptr
@@ -130,19 +130,36 @@ impl AliasGraph{
         }
     }
 
-    pub fn resolve_project(&mut self, def_id: &DefId, p: &Place) -> FxHashSet<*mut AliasGraphNode> {
+    pub fn resolve_project(&mut self, def_id: &DefId, p: &Place) -> *mut AliasGraphNode {
         unsafe{
-            let mut cur_node_id = GraphNodeId::new(def_id.clone(), p.local.as_usize());
-            let cur_node = self.get_or_insert_node(cur_node_id, None);
-
+            let cur_node_id = GraphNodeId::new(def_id.clone());
+            let mut cur_node = self.get_or_insert_node(cur_node_id, Some(format!("{:?}", p.local)));
+            // let mut current_node_set = Box::into_raw(Box::new(FxHashSet::default()));
+            // (*current_node_set).insert(cur_node);
             for projection in p.projection{
+                
                 match &projection{ // TODO: complex types
-                    mir::ProjectionElem::Deref => {
-                        if let Some(targets) = (*cur_node).get_out_vertices(&mut EdgeLabel::Deref as *mut _){
-
+                    mir::ProjectionElem::Deref => { // (*p).* ... get q of all p --deref--> q; if there's no such q, create one
+                        let deref_label = Box::into_raw(Box::new(EdgeLabel::Deref));
+                        if let Some(targets) = (*cur_node).get_out_vertices(deref_label){
+                            // current_node_set = targets;
+                            // if the set is empty
+                            if (*targets).is_empty(){
+                                let target_node = self.add_node(GraphNodeId::new(def_id.clone()));
+                                (*cur_node).add_target(target_node, deref_label);
+                                // (*current_node_set).insert(target_node);
+                                cur_node = target_node;
+                            }
+                            else {
+                                cur_node = *(*targets).iter().next().unwrap();
+                            }
                         }
-                        else{
-                            
+                        else { 
+                            let target_id = GraphNodeId::new(def_id.clone());
+                            let target_node = self.add_node(target_id, None);
+                            (*cur_node).add_target(target_node, deref_label);
+                            // (*current_node_set).insert(target_node);
+                            cur_node = target_node;
                         }
                     },
                     mir::ProjectionElem::Field(_, _) => (),
@@ -154,7 +171,8 @@ impl AliasGraph{
                     mir::ProjectionElem::Subtype(_) => todo!(),
                 }
             }
-            FxHashSet::default()
+            // current_node_set
+            cur_node
         }
     }
 
@@ -247,8 +265,8 @@ mod tests{
         let mut graph = AliasGraph::new();
     
         // add 2 nodes
-        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20), Some(String::from("node1")));
-        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21), Some(String::from("node2")));
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1))));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2))));
         
         unsafe {
             let label1 = Box::into_raw(Box::new(EdgeLabel::Deref));
@@ -278,9 +296,8 @@ mod tests{
         let mut graph = AliasGraph::new();
     
         // add 2 nodes
-        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20), Some(String::from("node1")));
-        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21), Some(String::from("node2")));
-        
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1))));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2))));
         unsafe {
             // move node1's set into node2
             let label1 = Box::into_raw(Box::new(EdgeLabel::Deref));
@@ -302,9 +319,9 @@ mod tests{
         let mut graph = AliasGraph::new();
     
         // add 2 nodes
-        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), 20), Some(String::from("node1")));
-        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), 21), Some(String::from("node2")));
-        let node3 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(3)), 22), Some(String::from("node3")));
+        let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1))));
+        let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2))));
+        let node3 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(3))));
     
         unsafe{
             let label1 = Box::into_raw(Box::new(EdgeLabel::Deref));
