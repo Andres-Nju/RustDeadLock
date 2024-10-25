@@ -1,28 +1,88 @@
-DefId(0:3 ~ t1[fdd8]::main)
+DefId(0:7 ~ t1[fdd8]::tt)
 _0:  @ () 
-_1:  @ i32 
-_2:  @ &ReErased i32 
+_1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_2:  @ std::sync::Mutex<i32> 
+_3:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_4:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_5:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_6:  @ &ReErased std::sync::Mutex<i32> 
+_7:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_8:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_9:  @ &ReErased std::sync::Mutex<i32> 
+_10:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
 
-[x => const 10_i32, y => _2, z => _2]
+[a => _1, aa => _3, w => _5, ww => _8]
 bb 0 {
 CleanUp: false
-    Assign((_1, const 10_i32)) @ _1=const 10_i32 @ Use
-    Assign((_2, &_1)) @ _2=&_1 @ RefThe type is []
+    _2 = std::sync::Mutex::<i32>::new(const 123_i32) -> [return: bb1, unwind continue] @ Call: FnDid: 6372, args: [i32]
+ arg is Type(i32)
+}
+bb 1 {
+CleanUp: false
+    _1 = std::sync::Arc::<std::sync::Mutex<i32>>::new(move _2) -> [return: bb2, unwind continue] @ Call: FnDid: 6025, args: [std::sync::Mutex<i32>]
+ arg is Type(std::sync::Mutex<i32>)
+}
+bb 2 {
+CleanUp: false
+    Assign((_4, &_1)) @ _4=&_1 @ RefThe type is []
+    _3 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(move _4) -> [return: bb3, unwind: bb14] @ Call: FnDid: 2441, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+ arg is Type(std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>)
+}
+bb 3 {
+CleanUp: false
+    Assign((_7, &_1)) @ _7=&_1 @ RefThe type is []
+    _6 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _7) -> [return: bb4, unwind: bb13] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+ arg is Type(std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>)
+}
+bb 4 {
+CleanUp: false
+    _5 = std::sync::Mutex::<i32>::lock(_6) -> [return: bb5, unwind: bb13] @ Call: FnDid: 6375, args: [i32]
+ arg is Type(i32)
+}
+bb 5 {
+CleanUp: false
+    Assign((_10, &_3)) @ _10=&_3 @ RefThe type is []
+    _9 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _10) -> [return: bb6, unwind: bb12] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+ arg is Type(std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>)
+}
+bb 6 {
+CleanUp: false
+    _8 = std::sync::Mutex::<i32>::lock(_9) -> [return: bb7, unwind: bb12] @ Call: FnDid: 6375, args: [i32]
+ arg is Type(i32)
+}
+bb 7 {
+CleanUp: false
+    drop(_8) -> [return: bb8, unwind: bb12] @ Drop
+}
+bb 8 {
+CleanUp: false
+    drop(_5) -> [return: bb9, unwind: bb13] @ Drop
+}
+bb 9 {
+CleanUp: false
+    drop(_3) -> [return: bb10, unwind: bb14] @ Drop
+}
+bb 10 {
+CleanUp: false
+    drop(_1) -> [return: bb11, unwind continue] @ Drop
+}
+bb 11 {
+CleanUp: false
     return @ Return
 }
-
-DefId(0:4 ~ t1[fdd8]::tt)
-_0:  @ () 
-_1:  @ i32 
-_2:  @ i32 
-_3:  @ &ReErased i32 
-
-[a => _1, b => const 10_i32, c => _3]
-bb 0 {
-CleanUp: false
-    Assign((_1, const 5_i32)) @ _1=const 5_i32 @ Use
-    Assign((_2, const 10_i32)) @ _2=const 10_i32 @ Use
-    Assign((_3, &_1)) @ _3=&_1 @ RefThe type is []
-    Assign((_1, _2)) @ _1=_2 @ Use CopyThe type is []
-    return @ Return
+bb 12 {
+CleanUp: true
+    drop(_5) -> [return: bb13, unwind terminate(cleanup)] @ Drop
+}
+bb 13 {
+CleanUp: true
+    drop(_3) -> [return: bb14, unwind terminate(cleanup)] @ Drop
+}
+bb 14 {
+CleanUp: true
+    drop(_1) -> [return: bb15, unwind terminate(cleanup)] @ Drop
+}
+bb 15 {
+CleanUp: true
+    resume @ UnwindResume
 }
