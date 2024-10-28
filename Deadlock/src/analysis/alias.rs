@@ -230,8 +230,19 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                             }
                                         }
                                     }
-                                    // else if name.as_str() == "unwrap"{
-                                    // } 
+                                    else if name.as_str() == "unwrap"{
+                                        assert_eq!(1, args.len());
+                                        match &args[0]{
+                                            // must be move _*
+                                            mir::Operand::Constant(_) => self.visit_constant(def_id, destination),
+                                            mir::Operand::Move(p) |
+                                            mir::Operand::Copy(p) => {
+                                                let unwrap = self.alias_graph.resolve_project(def_id, destination);
+                                                let unwraped = self.alias_graph.resolve_project(def_id, p);
+                                                self.make_alias(unwraped, unwrap);
+                                            },
+                                        }
+                                    } 
                                     // else if name.as_str() == "deref"{
                                     // }
                                     // todo: maybe problematic here

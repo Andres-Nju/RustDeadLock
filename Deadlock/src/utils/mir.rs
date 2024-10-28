@@ -60,7 +60,7 @@ impl<'tcx> Display for TerminatorKind<'tcx>{
                                     {
                                         s += &format!("Call: FnDid: {}, args: {:?}", id.index.as_usize(), args).as_str();
                                         for arg in args.iter(){
-                                            s += &format!("\n arg is {:?}", arg.unpack());
+                                            // s += &format!("\n arg is {:?}", arg.unpack());
                                         }
                                     }
                                 _ => (),
