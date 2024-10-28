@@ -8,12 +8,9 @@ fn main() {
 
 fn tt() {
 
-
-    let a = 1;
+    let a = Arc::new(Mutex::new(123));
     let aa = &a;
-    let mut aaa = &aa;
-    let b = 0;
-    let bb = &b;
-    aaa = &bb;
-
+    let b = a.clone();
+    let c = a.lock().unwrap();
+    let d = b.lock().unwrap();
 }

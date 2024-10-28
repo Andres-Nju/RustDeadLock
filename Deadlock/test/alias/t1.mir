@@ -2,16 +2,19 @@ DefId(0:7 ~ t1[fdd8]::tt)
 _0:  @ () 
 _1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
 _2:  @ std::sync::Mutex<i32> 
-_3:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_4:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_5:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
-_6:  @ &ReErased std::sync::Mutex<i32> 
-_7:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_8:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
-_9:  @ &ReErased std::sync::Mutex<i32> 
-_10:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_3:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_4:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_5:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_6:  @ std::sync::MutexGuard<ReErased, i32> 
+_7:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_8:  @ &ReErased std::sync::Mutex<i32> 
+_9:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_10:  @ std::sync::MutexGuard<ReErased, i32> 
+_11:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_12:  @ &ReErased std::sync::Mutex<i32> 
+_13:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
 
-[a => _1, aa => _3, w => _5, ww => _8]
+[a => _1, aa => _3, b => _4, c => _6, d => _10]
 bb 0 {
 CleanUp: false
     _2 = std::sync::Mutex::<i32>::new(const 123_i32) -> [return: bb1, unwind continue] @ Call: FnDid: 6372, args: [i32]
@@ -24,65 +27,78 @@ CleanUp: false
 }
 bb 2 {
 CleanUp: false
-    Assign((_4, &_1)) @ _4=&_1 @ RefThe type is []
-    _3 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(move _4) -> [return: bb3, unwind: bb14] @ Call: FnDid: 2441, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    Assign((_3, &_1)) @ _3=&_1 @ RefThe type is []
+    Assign((_5, &_1)) @ _5=&_1 @ RefThe type is []
+    _4 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(move _5) -> [return: bb3, unwind: bb16] @ Call: FnDid: 2441, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
  arg is Type(std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>)
 }
 bb 3 {
 CleanUp: false
-    Assign((_7, &_1)) @ _7=&_1 @ RefThe type is []
-    _6 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _7) -> [return: bb4, unwind: bb13] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    Assign((_9, &_1)) @ _9=&_1 @ RefThe type is []
+    _8 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _9) -> [return: bb4, unwind: bb15] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
  arg is Type(std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>)
 }
 bb 4 {
 CleanUp: false
-    _5 = std::sync::Mutex::<i32>::lock(_6) -> [return: bb5, unwind: bb13] @ Call: FnDid: 6375, args: [i32]
+    _7 = std::sync::Mutex::<i32>::lock(_8) -> [return: bb5, unwind: bb15] @ Call: FnDid: 6375, args: [i32]
  arg is Type(i32)
 }
 bb 5 {
 CleanUp: false
-    Assign((_10, &_3)) @ _10=&_3 @ RefThe type is []
-    _9 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _10) -> [return: bb6, unwind: bb12] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
- arg is Type(std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>)
+    _6 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _7) -> [return: bb6, unwind: bb15] @ Call: FnDid: 9195, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
+ arg is Type(std::sync::MutexGuard<ReErased, i32>)
+ arg is Type(std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>)
 }
 bb 6 {
 CleanUp: false
-    _8 = std::sync::Mutex::<i32>::lock(_9) -> [return: bb7, unwind: bb12] @ Call: FnDid: 6375, args: [i32]
- arg is Type(i32)
+    Assign((_13, &_4)) @ _13=&_4 @ RefThe type is []
+    _12 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _13) -> [return: bb7, unwind: bb14] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+ arg is Type(std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>)
 }
 bb 7 {
 CleanUp: false
-    drop(_8) -> [return: bb8, unwind: bb12] @ Drop
+    _11 = std::sync::Mutex::<i32>::lock(_12) -> [return: bb8, unwind: bb14] @ Call: FnDid: 6375, args: [i32]
+ arg is Type(i32)
 }
 bb 8 {
 CleanUp: false
-    drop(_5) -> [return: bb9, unwind: bb13] @ Drop
+    _10 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _11) -> [return: bb9, unwind: bb14] @ Call: FnDid: 9195, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
+ arg is Type(std::sync::MutexGuard<ReErased, i32>)
+ arg is Type(std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>)
 }
 bb 9 {
 CleanUp: false
-    drop(_3) -> [return: bb10, unwind: bb14] @ Drop
+    drop(_10) -> [return: bb10, unwind: bb14] @ Drop
 }
 bb 10 {
 CleanUp: false
-    drop(_1) -> [return: bb11, unwind continue] @ Drop
+    drop(_6) -> [return: bb11, unwind: bb15] @ Drop
 }
 bb 11 {
 CleanUp: false
-    return @ Return
+    drop(_4) -> [return: bb12, unwind: bb16] @ Drop
 }
 bb 12 {
-CleanUp: true
-    drop(_5) -> [return: bb13, unwind terminate(cleanup)] @ Drop
+CleanUp: false
+    drop(_1) -> [return: bb13, unwind continue] @ Drop
 }
 bb 13 {
-CleanUp: true
-    drop(_3) -> [return: bb14, unwind terminate(cleanup)] @ Drop
+CleanUp: false
+    return @ Return
 }
 bb 14 {
 CleanUp: true
-    drop(_1) -> [return: bb15, unwind terminate(cleanup)] @ Drop
+    drop(_6) -> [return: bb15, unwind terminate(cleanup)] @ Drop
 }
 bb 15 {
+CleanUp: true
+    drop(_4) -> [return: bb16, unwind terminate(cleanup)] @ Drop
+}
+bb 16 {
+CleanUp: true
+    drop(_1) -> [return: bb17, unwind terminate(cleanup)] @ Drop
+}
+bb 17 {
 CleanUp: true
     resume @ UnwindResume
 }
