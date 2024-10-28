@@ -1,3 +1,4 @@
+use collector::FnCollector;
 /// Copied from RAP
 /// Reference: RAP: https://github.com/Artisan-Lab/RAP
 
@@ -10,6 +11,7 @@ use std::collections::HashSet;
 
 pub type FnMap = HashMap<Option<HirId>, Vec<(BodyId, Span)>>;
 
+pub mod collector;
 /* 
    The graph simply records all pairs of callers and callees; 
    TODO: it can be extended, e.g.,
@@ -18,6 +20,7 @@ pub type FnMap = HashMap<Option<HirId>, Vec<(BodyId, Span)>>;
 */
 pub struct CallGraph<'tcx> {
     pub tcx: TyCtxt<'tcx>,
+    pub collector: FnCollector<'tcx>,
     pub edges: HashSet<(DefId, DefId)>,
     entry: Option<DefId>,
     pub topo: Vec<DefId>,
@@ -27,6 +30,7 @@ impl<'tcx> CallGraph<'tcx>{
     pub fn new(tcx: TyCtxt<'tcx>) -> Self{
         Self{
             tcx,
+            collector: FnCollector::new(tcx),
             edges: HashSet::new(),
             entry: None,
             topo: vec![],
@@ -35,15 +39,9 @@ impl<'tcx> CallGraph<'tcx>{
 
     pub fn start(&mut self) {
 	    println!("Start callgraph analysis");
-        let fn_items = FnCollector::collect(self.tcx);
-        for (_, &ref vec) in & fn_items {
-            for (body_id, _) in vec{
-                let body_did = self.tcx.hir().body_owner_def_id(*body_id).to_def_id();
-                if self.tcx.def_path_str(body_did) == "main"{
-                    self.entry = Some(body_did);
-                }
-                self.find_callees(body_did);
-            }
+        let fn_items = self.collector.collect(self.tcx);
+        for def_id in fn_items.clone().into_iter() {
+            self.find_callees(def_id);
         }
         self.topo_sort();
         println!("Finish callgraph analysis");
@@ -122,30 +120,3 @@ impl<'tcx> CallGraph<'tcx>{
 }
 
 
-
-pub struct FnCollector {
-    fn_map: FnMap,
-}
-
-impl FnCollector {
-    pub fn collect<'tcx>(tcx: TyCtxt<'tcx>) -> FnMap {
-        let mut collector = FnCollector {
-            fn_map: FnMap::default(),
-        };
-        tcx.hir().visit_all_item_likes_in_crate(&mut collector);
-        collector.fn_map
-    }
-}
-
-impl<'tcx> Visitor<'tcx> for FnCollector {
-    fn visit_item(&mut self, item: &'tcx rustc_hir::Item<'tcx>) {
-        match &item.kind {
-            ItemKind::Fn(_fn_sig, _generics, body_id) => {
-                let key = Some(body_id.hir_id);
-                let entry = self.fn_map.entry(key).or_insert(Vec::new());
-                entry.push((*body_id, item.span));
-            }
-            _ => (),
-        }
-    }
-}

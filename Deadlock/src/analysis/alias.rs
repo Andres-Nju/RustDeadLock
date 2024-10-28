@@ -63,7 +63,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
 
     fn intra_procedural_analysis(&mut self){
         // traverse the functions in a reversed topo order 
-        for def_id in self.call_graph.topo.clone(){
+        for def_id in self.call_graph.collector.functions(){
             if self.tcx.is_mir_available(def_id){
                 // each function is analyzed only once
                 let body = self.tcx.optimized_mir(def_id);
