@@ -32,6 +32,10 @@ impl<'tcx> AliasAnalysis<'tcx> {
         }
     }
 
+    pub fn consume_alias_results(self) -> (TyCtxt<'tcx>, CallGraph<'tcx>, AliasGraph, FxHashMap<DefId, Vec<BasicBlock>>){
+        (self.tcx, self.call_graph, self.alias_graph, self.control_flow_graph)
+    }
+
     pub fn run_analysis(&mut self){
         self.before_run();
 
@@ -283,6 +287,17 @@ impl<'tcx> AliasAnalysis<'tcx> {
 
 
     fn inter_procedural_analysis(&mut self){
+        for def_id in  self.call_graph.collector.functions(){
+            if self.tcx.is_mir_available(def_id){
+                let body = self.tcx.optimized_mir(def_id);
+                println!("Now analyze function {:?}, {:?}", body.span, self.tcx.def_path_str(def_id));
+                if self.tcx.def_path(def_id).data.len() == 1{
+                    // only analyze functions defined in current crate
+                    // FIXME: closure?
+                    self.visit_body(def_id, body);
+                }      
+            } 
+        }
         self.alias_graph.qirun_algorithm();
     }
 
