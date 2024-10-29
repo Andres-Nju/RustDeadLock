@@ -7,7 +7,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::{def_id::{DefId, LocalDefId}, definitions::DefPathData};
 use rustc_middle::{mir::{self, BasicBlock, Body, HasLocalDecls, Local, LocalDecls, Place, Rvalue, Statement, TerminatorKind}, ty::{Ty, TyCtxt}};
 
-use super::{callgraph::CallGraph, tools::{is_lock, is_mutex_method, is_smart_pointer}};
+use super::{callgraph::{call_graph_node::Call, CallGraph}, tools::{is_lock, is_mutex_method, is_smart_pointer}};
 
 
 pub mod graph;
@@ -96,7 +96,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
         // traverse the bb's statements
         data.statements.iter().for_each(|statement| self.visit_statement(def_id, bb_index, statement, body.local_decls()));
         // process the terminator
-        self.visit_terminator(&def_id, bb_index, &data.terminator().kind);
+        self.visit_terminator(&def_id, bb_index, &data.terminator().kind, body);
     }
 
     fn visit_statement(&mut self, def_id: DefId, bb_index: usize, statement: &Statement<'tcx>, decls: &LocalDecls){
@@ -172,7 +172,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
         }
     }
     
-    fn visit_terminator(&mut self, def_id: &DefId, bb_index: usize, terminator_kind: &TerminatorKind){
+    fn visit_terminator(&mut self, def_id: &DefId, bb_index: usize, terminator_kind: &TerminatorKind<'tcx>, body: &Body<'tcx>){
         match terminator_kind{ // TODO: if return a lock?
             rustc_middle::mir::TerminatorKind::Call { func, args, destination, target, unwind, call_source, fn_span } => {
                 match func{
@@ -267,6 +267,10 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                 }
                                             },
                                         }
+                                    }
+                                    else{
+                                        let call = Call::new((def_id.clone(), body.terminator_loc(BasicBlock::from_usize(bb_index))), fn_id.clone(), destination.clone(), args.clone());
+                                        self.call_graph.add_call(def_id.clone(), call);
                                     }
                                 }
                             },
