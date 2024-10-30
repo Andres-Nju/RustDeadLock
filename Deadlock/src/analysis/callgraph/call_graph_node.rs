@@ -7,7 +7,7 @@ use rustc_middle::mir::{Location, Operand, Place};
 type CallSite = (DefId, Location);
 /// a call is in this format:
 /// ret = call fun_id(arg1, arg2, ...);
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Call<'tcx>{
     call_site: CallSite,
     callee: DefId,
@@ -25,6 +25,22 @@ impl<'tcx> Call<'tcx>{
             ret,
             args,
         }
+    }
+
+    pub fn callee(&self) -> &DefId{
+        &self.callee
+    }
+
+    pub fn call_site(&self) -> &CallSite{
+        &self.call_site
+    }
+
+    pub fn ret(&self) -> &Place<'tcx>{
+        &self.ret
+    }
+
+    pub fn args(&self) -> &Vec<Operand<'tcx>>{
+        &self.args
     }
 }
 

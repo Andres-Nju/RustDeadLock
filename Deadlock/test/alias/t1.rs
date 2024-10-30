@@ -9,11 +9,11 @@ fn main() {
 
 fn tt() {
 
-    let a = Arc::new(Mutex::new(123));
-    let aa = &a;
-    let b = a.clone();
-    let c = a.lock().unwrap();
-    let d = b.lock().unwrap();
+    // let a = Arc::new(Mutex::new(123));
+    // let aa = &a;
+    // let b = a.clone();
+    // let c = a.lock().unwrap();
+    // let d = b.lock().unwrap();
 }
 
 fn a(){

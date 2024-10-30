@@ -63,7 +63,7 @@ impl AliasGraph{
     }
 
     // Combine two nodes into one, merging NodeY into NodeX
-    pub fn combine(&mut self, node_x: *mut AliasGraphNode, node_y: *mut AliasGraphNode) -> *mut AliasGraphNode {
+    pub fn combine(&mut self, mut node_x: *mut AliasGraphNode, mut node_y: *mut AliasGraphNode) -> *mut AliasGraphNode {
         unsafe {
             assert!(self.nodes.contains(&node_x));
             assert!(self.nodes.contains(&node_y));
@@ -72,12 +72,10 @@ impl AliasGraph{
                 return node_x;
             }
 
-            // // Ensure node_x has the higher degree
-            // if (*node_x).degree() < (*node_y).degree() {
-            //     let t = node_x;
-            //     node_x = node_y;
-            //     node_y = t;
-            // }
+            // Ensure node_x has the higher degree
+            if (*node_x).degree() < (*node_y).degree() {
+                std::mem::swap(&mut node_x, &mut node_y);
+            }
 
             // Merge NodeY's outgoing labels and targets into NodeX
             for label in  (*node_y).out_labels.iter() {

@@ -1,0 +1,134 @@
+DefId(0:6 ~ t3[9601]::main)
+_0:  @ () 
+_1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_2:  @ std::sync::Mutex<i32> 
+_3:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_4:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_5:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_6:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_7:  @ () 
+_8:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_9:  @ () 
+_10:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_11:  @ () 
+_12:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_13:  @ bool 
+_14:  @ bool 
+_15:  @ bool 
+
+[a => _1, b => _3, c => _5]
+bb 0 {
+CleanUp: false
+    Assign((_15, const false)) @ _15=const false @ Use Constant
+    Assign((_14, const false)) @ _14=const false @ Use Constant
+    Assign((_13, const false)) @ _13=const false @ Use Constant
+    _2 = std::sync::Mutex::<i32>::new(const 123_i32) -> [return: bb1, unwind continue] @ Call: FnDid: DefId(1:6372 ~ std[2f0b]::sync::mutex::{impl#4}::new)
+}
+bb 1 {
+CleanUp: false
+    Assign((_15, const true)) @ _15=const true @ Use Constant
+    _1 = std::sync::Arc::<std::sync::Mutex<i32>>::new(move _2) -> [return: bb2, unwind continue] @ Call: FnDid: DefId(5:6025 ~ alloc[a1b6]::sync::{impl#14}::new)
+}
+bb 2 {
+CleanUp: false
+    Assign((_4, &_1)) @ _4=&_1 @ RefThe type is []
+    _3 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(move _4) -> [return: bb3, unwind: bb14] @ Call: FnDid: DefId(2:2441 ~ core[0c3f]::clone::Clone::clone)
+}
+bb 3 {
+CleanUp: false
+    Assign((_14, const true)) @ _14=const true @ Use Constant
+    Assign((_6, &_3)) @ _6=&_3 @ RefThe type is []
+    _5 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(_6) -> [return: bb4, unwind: bb12] @ Call: FnDid: DefId(2:2441 ~ core[0c3f]::clone::Clone::clone)
+}
+bb 4 {
+CleanUp: false
+    Assign((_13, const true)) @ _13=const true @ Use Constant
+    Assign((_15, const false)) @ _15=const false @ Use Constant
+    Assign((_8, move _1)) @ _8=move _1 @ Use MoveThe type is []
+    _7 = testing(move _8) -> [return: bb5, unwind: bb10] @ Call: FnDid: DefId(0:7 ~ t3[9601]::testing)
+}
+bb 5 {
+CleanUp: false
+    Assign((_14, const false)) @ _14=const false @ Use Constant
+    Assign((_10, move _3)) @ _10=move _3 @ Use MoveThe type is []
+    _9 = testing(move _10) -> [return: bb6, unwind: bb10] @ Call: FnDid: DefId(0:7 ~ t3[9601]::testing)
+}
+bb 6 {
+CleanUp: false
+    Assign((_13, const false)) @ _13=const false @ Use Constant
+    Assign((_12, move _5)) @ _12=move _5 @ Use MoveThe type is []
+    _11 = testing(move _12) -> [return: bb7, unwind: bb10] @ Call: FnDid: DefId(0:7 ~ t3[9601]::testing)
+}
+bb 7 {
+CleanUp: false
+    Assign((_13, const false)) @ _13=const false @ Use Constant
+    Assign((_14, const false)) @ _14=const false @ Use Constant
+    Assign((_15, const false)) @ _15=const false @ Use Constant
+    return @ Return
+}
+bb 8 {
+CleanUp: true
+    resume @ UnwindResume
+}
+bb 9 {
+CleanUp: true
+    drop(_5) -> [return: bb12, unwind terminate(cleanup)] @ Drop
+}
+bb 10 {
+CleanUp: true
+    switchInt(_13) -> [0: bb12, otherwise: bb9] @ SwitchInt
+}
+bb 11 {
+CleanUp: true
+    drop(_3) -> [return: bb14, unwind terminate(cleanup)] @ Drop
+}
+bb 12 {
+CleanUp: true
+    switchInt(_14) -> [0: bb14, otherwise: bb11] @ SwitchInt
+}
+bb 13 {
+CleanUp: true
+    drop(_1) -> [return: bb8, unwind terminate(cleanup)] @ Drop
+}
+bb 14 {
+CleanUp: true
+    switchInt(_15) -> [0: bb8, otherwise: bb13] @ SwitchInt
+}
+
+DefId(0:7 ~ t3[9601]::testing)
+_0:  @ () 
+_1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_2:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_3:  @ &ReErased std::sync::Mutex<i32> 
+_4:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+
+[a => _1]
+bb 0 {
+CleanUp: false
+    Assign((_4, &_1)) @ _4=&_1 @ RefThe type is []
+    _3 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _4) -> [return: bb1, unwind: bb5] @ Call: FnDid: DefId(2:3101 ~ core[0c3f]::ops::deref::Deref::deref)
+}
+bb 1 {
+CleanUp: false
+    _2 = std::sync::Mutex::<i32>::lock(_3) -> [return: bb2, unwind: bb5] @ Call: FnDid: DefId(1:6375 ~ std[2f0b]::sync::mutex::{impl#5}::lock)
+}
+bb 2 {
+CleanUp: false
+    drop(_2) -> [return: bb3, unwind: bb5] @ Drop
+}
+bb 3 {
+CleanUp: false
+    drop(_1) -> [return: bb4, unwind continue] @ Drop
+}
+bb 4 {
+CleanUp: false
+    return @ Return
+}
+bb 5 {
+CleanUp: true
+    drop(_1) -> [return: bb6, unwind terminate(cleanup)] @ Drop
+}
+bb 6 {
+CleanUp: true
+    resume @ UnwindResume
+}
