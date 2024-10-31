@@ -305,8 +305,8 @@ impl AliasGraphNode {
 /// _1 --field--> _10 --field--> _11, than make_alias(_0, _11)
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Copy)]
 pub struct GraphNodeId{
-    def_id: DefId,
-    index: usize,
+    pub def_id: DefId,
+    pub index: usize,
 }
 
 impl GraphNodeId{

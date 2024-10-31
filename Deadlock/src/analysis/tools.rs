@@ -3,7 +3,7 @@ use rustc_hash::FxHashSet;
 use rustc_hir::def_id::DefId;
 use rustc_middle::{mir::{ self, Place, Local}, ty::{self, Ty}};
 
-use super::{lock::{LockGuard, LockObject}, LockSetAnalysis};
+use super::{LockSetAnalysis};
 
 /// whether a type is lock
 pub fn is_lock(ty: &Ty) -> bool{
@@ -56,17 +56,5 @@ pub fn is_guard(ty: &Ty) -> bool{
 impl<'tcx> LockSetAnalysis<'tcx>{
     pub fn get_ty(&self, def_id: &DefId, index: usize) -> Ty<'tcx>{
         self.tcx.optimized_mir(def_id).local_decls[Local::from_usize(index)].ty
-    }
-
-    pub fn points_to_lock_guards(&self, def_id: &DefId, variable: usize) -> FxHashSet<LockGuard>{
-        let possible_lock_guards = FxHashSet::default();
-
-        possible_lock_guards
-    }
-
-    pub fn points_to_locks(&self, def_id: &DefId, lock_guard: &LockGuard) -> FxHashSet<LockObject>{
-        let possible_locks = FxHashSet::default();
-
-        possible_locks
     }
 }

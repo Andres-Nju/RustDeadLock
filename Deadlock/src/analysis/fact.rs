@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use super::lock::{LockFact, LockSetFact, LockSummary};
 
 
@@ -21,8 +19,8 @@ pub trait VecFact<V>{
 
 
 
-impl SetFact<Rc<LockFact>> for LockSetFact{
-    fn update(&mut self, value: Rc<LockFact>) {
+impl SetFact<LockFact> for LockSetFact{
+    fn update(&mut self, value: LockFact) {
         self.insert(value);
     }
 
