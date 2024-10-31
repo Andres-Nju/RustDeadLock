@@ -1,7 +1,7 @@
-Show MIR
 DefId(0:6 ~ t1[fdd8]::main)
 _0:  @ () 
 _1:  @ () 
+_2:  @ () 
 
 []
 bb 0 {
@@ -10,6 +10,10 @@ CleanUp: false
 }
 bb 1 {
 CleanUp: false
+    _2 = a() -> [return: bb2, unwind continue] @ Call: FnDid: 8, args: []
+}
+bb 2 {
+CleanUp: false
     return @ Return
 }
 
@@ -17,27 +21,22 @@ DefId(0:7 ~ t1[fdd8]::tt)
 _0:  @ () 
 _1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
 _2:  @ std::sync::Mutex<i32> 
-_3:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_4:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_5:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_6:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_7:  @ std::sync::MutexGuard<ReErased, i32> 
-_8:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
-_9:  @ &ReErased std::sync::Mutex<i32> 
-_10:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_11:  @ std::sync::MutexGuard<ReErased, i32> 
-_12:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
-_13:  @ &ReErased std::sync::Mutex<i32> 
-_14:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
-_15:  @ std::sync::MutexGuard<ReErased, i32> 
-_16:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
-_17:  @ &ReErased std::sync::Mutex<i32> 
-_18:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_3:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_4:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_5:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_6:  @ std::sync::MutexGuard<ReErased, i32> 
+_7:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_8:  @ &ReErased std::sync::Mutex<i32> 
+_9:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_10:  @ std::sync::MutexGuard<ReErased, i32> 
+_11:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_12:  @ &ReErased std::sync::Mutex<i32> 
+_13:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
 
-[a => _1, b => _3, e => _5, c => _7, d => _11, f => _15]
+[a => _1, aa => _3, b => _4, c => _6, d => _10]
 bb 0 {
 CleanUp: false
-    _2 = std::sync::Mutex::<i32>::new(const 123_i32) -> [return: bb1, unwind continue] @ Call: FnDid: 6194, args: [i32]
+    _2 = std::sync::Mutex::<i32>::new(const 123_i32) -> [return: bb1, unwind continue] @ Call: FnDid: 6372, args: [i32]
 }
 bb 1 {
 CleanUp: false
@@ -45,103 +44,252 @@ CleanUp: false
 }
 bb 2 {
 CleanUp: false
-    Assign((_4, &_1)) @ _4=&_1 @ RefThe type is []
-    _3 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(move _4) -> [return: bb3, unwind: bb24] @ Call: FnDid: 2441, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    Assign((_3, &_1)) @ _3=&_1 @ RefThe type is []
+    Assign((_5, &_1)) @ _5=&_1 @ RefThe type is []
+    _4 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(move _5) -> [return: bb3, unwind: bb16] @ Call: FnDid: 2441, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
 }
 bb 3 {
 CleanUp: false
-    Assign((_6, &_3)) @ _6=&_3 @ RefThe type is []
-    _5 = <std::sync::Arc<std::sync::Mutex<i32>> as std::clone::Clone>::clone(move _6) -> [return: bb4, unwind: bb23] @ Call: FnDid: 2441, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    Assign((_9, &_1)) @ _9=&_1 @ RefThe type is []
+    _8 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _9) -> [return: bb4, unwind: bb15] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
 }
 bb 4 {
 CleanUp: false
-    Assign((_10, &_1)) @ _10=&_1 @ RefThe type is []
-    _9 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _10) -> [return: bb5, unwind: bb22] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    _7 = std::sync::Mutex::<i32>::lock(_8) -> [return: bb5, unwind: bb15] @ Call: FnDid: 6375, args: [i32]
 }
 bb 5 {
 CleanUp: false
-    _8 = std::sync::Mutex::<i32>::lock(_9) -> [return: bb6, unwind: bb22] @ Call: FnDid: 6197, args: [i32]
+    _6 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _7) -> [return: bb6, unwind: bb15] @ Call: FnDid: 9195, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
 }
 bb 6 {
 CleanUp: false
-    _7 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _8) -> [return: bb7, unwind: bb22] @ Call: FnDid: 9204, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
+    Assign((_13, &_4)) @ _13=&_4 @ RefThe type is []
+    _12 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _13) -> [return: bb7, unwind: bb14] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
 }
 bb 7 {
 CleanUp: false
-    Assign((_14, &_3)) @ _14=&_3 @ RefThe type is []
-    _13 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _14) -> [return: bb8, unwind: bb21] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    _11 = std::sync::Mutex::<i32>::lock(_12) -> [return: bb8, unwind: bb14] @ Call: FnDid: 6375, args: [i32]
 }
 bb 8 {
 CleanUp: false
-    _12 = std::sync::Mutex::<i32>::lock(_13) -> [return: bb9, unwind: bb21] @ Call: FnDid: 6197, args: [i32]
+    _10 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _11) -> [return: bb9, unwind: bb14] @ Call: FnDid: 9195, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
 }
 bb 9 {
 CleanUp: false
-    _11 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _12) -> [return: bb10, unwind: bb21] @ Call: FnDid: 9204, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
+    drop(_10) -> [return: bb10, unwind: bb14] @ Drop
 }
 bb 10 {
 CleanUp: false
-    Assign((_18, &_5)) @ _18=&_5 @ RefThe type is []
-    _17 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _18) -> [return: bb11, unwind: bb20] @ Call: FnDid: 3101, args: [std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global>]
+    drop(_6) -> [return: bb11, unwind: bb15] @ Drop
 }
 bb 11 {
 CleanUp: false
-    _16 = std::sync::Mutex::<i32>::lock(_17) -> [return: bb12, unwind: bb20] @ Call: FnDid: 6197, args: [i32]
+    drop(_4) -> [return: bb12, unwind: bb16] @ Drop
 }
 bb 12 {
 CleanUp: false
-    _15 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _16) -> [return: bb13, unwind: bb20] @ Call: FnDid: 9204, args: [std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>]
+    drop(_1) -> [return: bb13, unwind continue] @ Drop
 }
 bb 13 {
 CleanUp: false
-    drop(_15) -> [return: bb14, unwind: bb20] @ Drop
-}
-bb 14 {
-CleanUp: false
-    drop(_11) -> [return: bb15, unwind: bb21] @ Drop
-}
-bb 15 {
-CleanUp: false
-    drop(_7) -> [return: bb16, unwind: bb22] @ Drop
-}
-bb 16 {
-CleanUp: false
-    drop(_5) -> [return: bb17, unwind: bb23] @ Drop
-}
-bb 17 {
-CleanUp: false
-    drop(_3) -> [return: bb18, unwind: bb24] @ Drop
-}
-bb 18 {
-CleanUp: false
-    drop(_1) -> [return: bb19, unwind continue] @ Drop
-}
-bb 19 {
-CleanUp: false
     return @ Return
 }
-bb 20 {
+bb 14 {
 CleanUp: true
-    drop(_11) -> [return: bb21, unwind terminate(cleanup)] @ Drop
+    drop(_6) -> [return: bb15, unwind terminate(cleanup)] @ Drop
 }
-bb 21 {
+bb 15 {
 CleanUp: true
-    drop(_7) -> [return: bb22, unwind terminate(cleanup)] @ Drop
+    drop(_4) -> [return: bb16, unwind terminate(cleanup)] @ Drop
 }
-bb 22 {
+bb 16 {
 CleanUp: true
-    drop(_5) -> [return: bb23, unwind terminate(cleanup)] @ Drop
+    drop(_1) -> [return: bb17, unwind terminate(cleanup)] @ Drop
 }
-bb 23 {
-CleanUp: true
-    drop(_3) -> [return: bb24, unwind terminate(cleanup)] @ Drop
-}
-bb 24 {
-CleanUp: true
-    drop(_1) -> [return: bb25, unwind terminate(cleanup)] @ Drop
-}
-bb 25 {
+bb 17 {
 CleanUp: true
     resume @ UnwindResume
 }
 
+DefId(0:8 ~ t1[fdd8]::a)
+_0:  @ () 
+_1:  @ () 
+_2:  @ () 
+
+[]
+bb 0 {
+CleanUp: false
+    _1 = b() -> [return: bb1, unwind continue] @ Call: FnDid: 9, args: []
+}
+bb 1 {
+CleanUp: false
+    _2 = c() -> [return: bb2, unwind continue] @ Call: FnDid: 10, args: []
+}
+bb 2 {
+CleanUp: false
+    return @ Return
+}
+
+DefId(0:9 ~ t1[fdd8]::b)
+_0:  @ () 
+
+[]
+bb 0 {
+CleanUp: false
+    return @ Return
+}
+
+DefId(0:10 ~ t1[fdd8]::c)
+_0:  @ () 
+_1:  @ () 
+
+[]
+bb 0 {
+CleanUp: false
+    _1 = b() -> [return: bb1, unwind continue] @ Call: FnDid: 9, args: []
+}
+bb 1 {
+CleanUp: false
+    return @ Return
+}
+
+
+Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 2 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 2 }
+  Out Labels:
+  In Labels:
+    - Deref
+    - Guard
+  Successors:
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 1 }
+    - Label: Guard
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 7 }
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 11 }
+
+Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 1 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 1 }
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 4 }
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 8 }
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 12 }
+  Out Labels:
+    - Deref
+  In Labels:
+    - Deref
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 2 }
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 3 }
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 5 }
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 9 }
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 13 }
+
+Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 3 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 3 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 1 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 5 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 5 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 1 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 9 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 9 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 1 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 7 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 7 }
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 6 }
+  Out Labels:
+    - Guard
+  In Labels:
+  Successors:
+    - Label: Guard
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 2 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 13 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 13 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 1 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 11 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 11 }
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 10 }
+  Out Labels:
+    - Guard
+  In Labels:
+  Successors:
+    - Label: Guard
+      - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 2 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:8 ~ t1[fdd8]::a), index: 2 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:8 ~ t1[fdd8]::a), index: 2 }
+    - Node ID: GraphNodeId { def_id: DefId(0:10 ~ t1[fdd8]::c), index: 0 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:6 ~ t1[fdd8]::main), index: 2 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:6 ~ t1[fdd8]::main), index: 2 }
+    - Node ID: GraphNodeId { def_id: DefId(0:8 ~ t1[fdd8]::a), index: 0 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:10 ~ t1[fdd8]::c), index: 1 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:10 ~ t1[fdd8]::c), index: 1 }
+    - Node ID: GraphNodeId { def_id: DefId(0:8 ~ t1[fdd8]::a), index: 1 }
+    - Node ID: GraphNodeId { def_id: DefId(0:9 ~ t1[fdd8]::b), index: 0 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:6 ~ t1[fdd8]::main), index: 1 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:6 ~ t1[fdd8]::main), index: 1 }
+    - Node ID: GraphNodeId { def_id: DefId(0:7 ~ t1[fdd8]::tt), index: 0 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
