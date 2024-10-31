@@ -1,0 +1,49 @@
+DefId(0:6 ~ t2[3994]::main)
+_0:  @ () 
+_1:  @ i32 
+_2:  @ i32 
+
+[aa => _1, bb => _2]
+bb 0 {
+CleanUp: false
+    _1 = a() -> [return: bb1, unwind continue] @ Call: FnDid: 7, args: []
+}
+bb 1 {
+CleanUp: false
+    _2 = b() -> [return: bb2, unwind continue] @ Call: FnDid: 8, args: []
+}
+bb 2 {
+CleanUp: false
+    return @ Return
+}
+
+DefId(0:7 ~ t2[3994]::a)
+_0:  @ i32 
+_1:  @ i32 
+
+[]
+bb 0 {
+CleanUp: false
+    _1 = b() -> [return: bb1, unwind continue] @ Call: FnDid: 8, args: []
+}
+bb 1 {
+CleanUp: false
+    _0 = c() -> [return: bb2, unwind continue] @ Call: FnDid: 9, args: []
+}
+bb 2 {
+CleanUp: false
+    return @ Return
+}
+
+DefId(0:8 ~ t2[3994]::b)
+_0:  @ i32 
+
+[]
+bb 0 {
+CleanUp: false
+    _0 = c() -> [return: bb1, unwind continue] @ Call: FnDid: 9, args: []
+}
+bb 1 {
+CleanUp: false
+    return @ Return
+}

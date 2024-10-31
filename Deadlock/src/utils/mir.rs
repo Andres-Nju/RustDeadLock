@@ -56,8 +56,10 @@ impl<'tcx> Display for TerminatorKind<'tcx>{
                 match func {
                     Operand::Constant(constant) => {
                             match constant.ty().kind() {
-                                ty::FnDef(id, args) =>
-                                    s += &format!("Call: FnDid: {}, args: {:?}", id.index.as_usize(), args).as_str(),
+                                ty::FnDef(id, ..) =>
+                                    {
+                                        s += &format!("Call: FnDid: {:?}", id).as_str();
+                                    }
                                 _ => (),
                             }
                     },
@@ -125,11 +127,15 @@ impl<'tcx> Display for Rvalue<'tcx> {
                 match o{
                     Operand::Copy(p) => {
                         s += " Copy";
+                        s += format!("The type is {:?}", p.projection).as_str();
                     },
                     Operand::Move(p) => {
                         s += " Move";
+                        s += format!("The type is {:?}", p.projection).as_str();
                     },
-                    Operand::Constant(_) => (),
+                    Operand::Constant(_) => {
+                        s += " Constant";
+                    },
                 }
             },
             Rvalue::Repeat( .. ) =>

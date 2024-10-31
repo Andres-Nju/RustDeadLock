@@ -1,49 +1,41 @@
-/// Copied from RAP
-/// Reference: RAP: https://github.com/Artisan-Lab/RAP
+use call_graph_node::Call;
+use collector::FnCollector;
+use rustc_hash::{FxHashMap, FxHashSet};
 
-use rustc_middle::{mir::{Operand, TerminatorKind}};
+use rustc_middle::mir::{Location, Operand, TerminatorKind};
 use rustc_middle::ty::{self,TyCtxt};
 use rustc_hir::{def_id::DefId,intravisit::Visitor,BodyId,HirId,ItemKind};
 use rustc_span::Span;
-use std::collections::HashMap;
-use std::collections::HashSet;
 
-pub type FnMap = HashMap<Option<HirId>, Vec<(BodyId, Span)>>;
+pub mod collector;
+pub mod call_graph_node;
 
-/* 
-   The graph simply records all pairs of callers and callees; 
-   TODO: it can be extended, e.g.,
-     1) to manage the graph as a linked list of function nodes
-     2) to record all attributes of each function
-*/
 pub struct CallGraph<'tcx> {
     pub tcx: TyCtxt<'tcx>,
-    pub edges: HashSet<(DefId, DefId)>,
+    pub collector: FnCollector<'tcx>,
+    pub edges: FxHashSet<(DefId, DefId)>,
     entry: Option<DefId>,
     pub topo: Vec<DefId>,
+    pub calls_map: FxHashMap<DefId, FxHashSet<Call<'tcx>>>,
 }
 
 impl<'tcx> CallGraph<'tcx>{
     pub fn new(tcx: TyCtxt<'tcx>) -> Self{
         Self{
             tcx,
-            edges: HashSet::new(),
+            collector: FnCollector::new(tcx),
+            edges: FxHashSet::default(),
             entry: None,
             topo: vec![],
+            calls_map: FxHashMap::default(),
         }
     }
 
     pub fn start(&mut self) {
 	    println!("Start callgraph analysis");
-        let fn_items = FnCollector::collect(self.tcx);
-        for (_, &ref vec) in & fn_items {
-            for (body_id, _) in vec{
-                let body_did = self.tcx.hir().body_owner_def_id(*body_id).to_def_id();
-                if self.tcx.def_path_str(body_did) == "main"{
-                    self.entry = Some(body_did);
-                }
-                self.find_callees(body_did);
-            }
+        let fn_items = self.collector.collect(self.tcx);
+        for def_id in fn_items.clone().into_iter() {
+            self.find_callees(def_id);
         }
         self.topo_sort();
         println!("Finish callgraph analysis");
@@ -72,7 +64,7 @@ impl<'tcx> CallGraph<'tcx>{
     }
 
     pub fn topo_sort(&mut self) {
-        let mut visited = HashSet::new();
+        let mut visited = FxHashSet::default();
         let mut stack = Vec::new();
 
         if let Some(entry_id) = self.entry {
@@ -94,7 +86,7 @@ impl<'tcx> CallGraph<'tcx>{
     }
 
     // dfs to generate topo sort
-    fn dfs(&self, node: DefId, visited: &mut HashSet<DefId>, stack: &mut Vec<DefId>) {
+    fn dfs(&self, node: DefId, visited: &mut FxHashSet<DefId>, stack: &mut Vec<DefId>) {
         visited.insert(node);
         
         for &(_, callee) in self.edges.iter().filter(|&&(caller, _)| caller == node) {
@@ -104,6 +96,20 @@ impl<'tcx> CallGraph<'tcx>{
         }
         
         stack.push(node);
+    }
+
+    pub fn add_call(&mut self, caller: DefId, call: Call<'tcx>){
+        let calls = self.calls_map.entry(caller).or_insert(FxHashSet::default());
+        calls.insert(call);
+    }
+
+    pub fn print_calls(&self){
+        for a in self.calls_map.iter(){
+            println!("{:?} -> \n", a.0);
+            for call in a.1{
+                println!("  {:?}", call);
+            }
+        }
     }
 
     pub fn print_call_edges(&self){
@@ -123,29 +129,90 @@ impl<'tcx> CallGraph<'tcx>{
 
 
 
-pub struct FnCollector {
-    fn_map: FnMap,
-}
+// use call_graph_node::CallGraphNode;
+// use collector::FnCollector;
+// use rustc_hash::FxHashSet;
+// use std::rc::Rc;
+// use rustc_middle::{mir::{Operand, TerminatorKind}};
+// use rustc_middle::ty::{self,TyCtxt};
+// use rustc_hir::{def_id::DefId,intravisit::Visitor,BodyId,HirId,ItemKind};
+// use rustc_span::Span;
 
-impl FnCollector {
-    pub fn collect<'tcx>(tcx: TyCtxt<'tcx>) -> FnMap {
-        let mut collector = FnCollector {
-            fn_map: FnMap::default(),
-        };
-        tcx.hir().visit_all_item_likes_in_crate(&mut collector);
-        collector.fn_map
-    }
-}
+// pub mod collector;
+// pub mod call_graph_node;
 
-impl<'tcx> Visitor<'tcx> for FnCollector {
-    fn visit_item(&mut self, item: &'tcx rustc_hir::Item<'tcx>) {
-        match &item.kind {
-            ItemKind::Fn(_fn_sig, _generics, body_id) => {
-                let key = Some(body_id.hir_id);
-                let entry = self.fn_map.entry(key).or_insert(Vec::new());
-                entry.push((*body_id, item.span));
-            }
-            _ => (),
-        }
-    }
-}
+// pub struct CallGraph<'tcx> {
+//     pub tcx: TyCtxt<'tcx>,
+//     pub collector: FnCollector<'tcx>,
+//     pub edges: FxHashSet<(Rc<CallGraphNode>, Rc<CallGraphNode>)>,
+//     entry: Option<Rc<CallGraphNode>>,
+//     pub topo: Vec<Rc<CallGraphNode>>,
+// }
+
+// impl<'tcx> CallGraph<'tcx>{
+//     pub fn new(tcx: TyCtxt<'tcx>) -> Self{ 
+//         Self{
+//             tcx,
+//             collector: FnCollector::new(tcx),
+//             edges: FxHashSet::default(),
+//             entry: None,
+//             topo: vec![],
+//         }
+//     }
+
+//     pub fn start(&mut self) {
+//         self.collector.collect(self.tcx);
+//     }
+
+
+//     pub fn topo_sort(&mut self) {
+//         let mut visited = FxHashSet::default();
+//         let mut stack = Vec::new();
+
+//         if let Some(entry_id) = &self.entry {
+//             if !visited.contains(entry_id) {
+//                 self.dfs(entry_id.clone(), &mut visited, &mut stack);
+//             }
+//         } else {
+//             // if there's no entry, every caller is the entry.
+//             for (caller, _) in &self.edges {
+//                 if !visited.contains(caller) {
+//                     self.dfs(caller.clone(), &mut visited, &mut stack);
+//                 }
+//             }
+//         }
+
+//         while let Some(node) = stack.pop() {
+//             self.topo.push(node);
+//         }
+//     }
+
+//     // dfs to generate topo sort
+//     fn dfs(&self, node: Rc<CallGraphNode>, visited: &mut FxHashSet<Rc<CallGraphNode>>, stack: &mut Vec<Rc<CallGraphNode>>) {
+//         visited.insert(node.clone());
+        
+//         for (_, callee) in self.edges.iter().filter(|(caller, _)| node.eq(caller)) {
+//             if !visited.contains(callee) {
+//                 self.dfs(callee.clone(), visited, stack);
+//             }
+//         }
+        
+//         stack.push(node);
+//     }
+
+//     pub fn print_call_edges(&self){
+//         println!("Show all edges of the call graph:");
+//         for (caller, callee) in &self.edges {
+//             println!("  {:?} -> {:?}", caller, callee);
+//         }
+//     }
+//     pub fn print_topo(&self){
+//         println!("Show the topo sort of the call graph:");
+//         for f in &self.topo{
+//             println!("{:?} ", f);
+//         }
+//         println!();
+//     }
+// }
+
+
