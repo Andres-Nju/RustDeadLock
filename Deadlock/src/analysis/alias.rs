@@ -73,7 +73,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
             if self.tcx.is_mir_available(def_id){
                 // each function is analyzed only once
                 let body = self.tcx.optimized_mir(def_id);
-                println!("Now analyze function {:?}, {:?}", body.span, self.tcx.def_path_str(def_id));
+                // println!("Now analyze function {:?}, {:?}", body.span, self.tcx.def_path_str(def_id));
                 if self.tcx.def_path(def_id).data.len() == 1{
                     // only analyze functions defined in current crate
                     // FIXME: closure?
@@ -87,7 +87,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
         self.init_func(&def_id, body);
         // FIXME: redundant clone
         for current_bb_index in self.control_flow_graph[&def_id].clone(){
-            println!("bb {:?} now under alias analysis ", current_bb_index);
+            // println!("bb {:?} now under alias analysis ", current_bb_index);
             self.visit_bb(def_id, current_bb_index.as_usize(), body);
         }
     }
