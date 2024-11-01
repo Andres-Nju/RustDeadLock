@@ -84,6 +84,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         // self.alias_graph.print_graph();
         self.print_lock_set_facts();
         println!("lock graph:\n{:?}", self.lock_graph);
+        self.lock_graph.print_loops();
     }
 
     pub fn print_lock_set_facts(&self) {
