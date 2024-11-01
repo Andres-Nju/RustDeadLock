@@ -1,0 +1,186 @@
+DefId(0:6 ~ dl_0[8d32]::main)
+_0:  @ () 
+_1:  @ std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_2:  @ std::sync::Mutex<i32> 
+_3:  @ std::sync::MutexGuard<ReErased, i32> 
+_4:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_5:  @ &ReErased std::sync::Mutex<i32> 
+_6:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_7:  @ &ReErased mut i32 
+_8:  @ &ReErased mut std::sync::MutexGuard<ReErased, i32> 
+_9:  @ (i32, bool) 
+_10:  @ () 
+_11:  @ std::fmt::Arguments<ReErased> 
+_12:  @ &ReErased [&ReErased str] 
+_13:  @ &ReErased [core::fmt::rt::Argument<ReErased>] 
+_14:  @ &ReErased [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_15:  @ [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_16:  @ core::fmt::rt::Argument<ReErased> 
+_17:  @ &ReErased i32 
+_18:  @ &ReErased std::sync::MutexGuard<ReErased, i32> 
+_19:  @ std::sync::MutexGuard<ReErased, i32> 
+_20:  @ std::result::Result<std::sync::MutexGuard<ReErased, i32>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, i32>>> 
+_21:  @ &ReErased std::sync::Mutex<i32> 
+_22:  @ &ReErased std::sync::Arc<std::sync::Mutex<i32>, std::alloc::Global> 
+_23:  @ &ReErased mut i32 
+_24:  @ &ReErased mut std::sync::MutexGuard<ReErased, i32> 
+_25:  @ (i32, bool) 
+_26:  @ () 
+_27:  @ std::fmt::Arguments<ReErased> 
+_28:  @ &ReErased [&ReErased str] 
+_29:  @ &ReErased [core::fmt::rt::Argument<ReErased>] 
+_30:  @ &ReErased [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_31:  @ [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_32:  @ core::fmt::rt::Argument<ReErased> 
+_33:  @ &ReErased i32 
+_34:  @ &ReErased std::sync::MutexGuard<ReErased, i32> 
+_35:  @ () 
+_36:  @ std::fmt::Arguments<ReErased> 
+_37:  @ &ReErased [&ReErased str] 
+_38:  @ &ReErased [&ReErased str; 1_usize] 
+_39:  @ &ReErased [&ReErased str; 2_usize] 
+_40:  @ &ReErased [&ReErased str; 2_usize] 
+
+[lock => _1, num => _3, num_again => _19]
+bb 0 {
+CleanUp: false
+    _2 = std::sync::Mutex::<i32>::new(const 0_i32) -> [return: bb1, unwind continue] @ Call: FnDid: DefId(1:6372 ~ std[2f0b]::sync::mutex::{impl#4}::new)
+}
+bb 1 {
+CleanUp: false
+    _1 = std::sync::Arc::<std::sync::Mutex<i32>>::new(move _2) -> [return: bb2, unwind continue] @ Call: FnDid: DefId(5:6025 ~ alloc[a1b6]::sync::{impl#14}::new)
+}
+bb 2 {
+CleanUp: false
+    Assign((_6, &_1)) @ _6=&_1 @ RefThe type is []
+    _5 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _6) -> [return: bb3, unwind: bb28] @ Call: FnDid: DefId(2:3101 ~ core[0c3f]::ops::deref::Deref::deref)
+}
+bb 3 {
+CleanUp: false
+    _4 = std::sync::Mutex::<i32>::lock(_5) -> [return: bb4, unwind: bb28] @ Call: FnDid: DefId(1:6375 ~ std[2f0b]::sync::mutex::{impl#5}::lock)
+}
+bb 4 {
+CleanUp: false
+    _3 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _4) -> [return: bb5, unwind: bb28] @ Call: FnDid: DefId(2:9195 ~ core[0c3f]::result::{impl#0}::unwrap)
+}
+bb 5 {
+CleanUp: false
+    Assign((_8, &mut _3)) @ _8=&mut _3 @ RefThe type is []
+    _7 = <std::sync::MutexGuard<'_, i32> as std::ops::DerefMut>::deref_mut(move _8) -> [return: bb6, unwind: bb27] @ Call: FnDid: DefId(2:3113 ~ core[0c3f]::ops::deref::DerefMut::deref_mut)
+}
+bb 6 {
+CleanUp: false
+    Assign((_9, CheckedAdd((*_7), const 1_i32))) @ _9=CheckedAdd((*_7), const 1_i32) @ CheckedBinaryOp
+    assert(!move (_9.1: bool), "attempt to compute `{} + {}`, which would overflow", (*_7), const 1_i32) -> [success: bb7, unwind: bb27] @ Assert
+}
+bb 7 {
+CleanUp: false
+    Assign(((*_7), move (_9.0: i32))) @ (*_7)=move (_9.0: i32) @ Use MoveThe type is [Field(0, i32)]
+    Assign((_40, const _)) @ _40=const _ @ Use Constant
+    Assign((_12, _40 as &[&str] (PointerCoercion(Unsize)))) @ _12=_40 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    Assign((_18, &_3)) @ _18=&_3 @ RefThe type is []
+    _17 = <std::sync::MutexGuard<'_, i32> as std::ops::Deref>::deref(move _18) -> [return: bb8, unwind: bb27] @ Call: FnDid: DefId(2:3101 ~ core[0c3f]::ops::deref::Deref::deref)
+}
+bb 8 {
+CleanUp: false
+    _16 = core::fmt::rt::Argument::<'_>::new_display::<i32>(_17) -> [return: bb9, unwind: bb27] @ Call: FnDid: DefId(2:9786 ~ core[0c3f]::fmt::rt::{impl#1}::new_display)
+}
+bb 9 {
+CleanUp: false
+    Assign((_15, [move _16])) @ _15=[move _16] @ Aggregate
+    Assign((_14, &_15)) @ _14=&_15 @ RefThe type is []
+    Assign((_13, _14 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)))) @ _13=_14 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)) @ Cast
+    _11 = std::fmt::Arguments::<'_>::new_v1(move _12, move _13) -> [return: bb10, unwind: bb27] @ Call: FnDid: DefId(2:9866 ~ core[0c3f]::fmt::{impl#2}::new_v1)
+}
+bb 10 {
+CleanUp: false
+    _10 = std::io::_print(move _11) -> [return: bb11, unwind: bb27] @ Call: FnDid: DefId(1:3326 ~ std[2f0b]::io::stdio::_print)
+}
+bb 11 {
+CleanUp: false
+    Assign((_22, &_1)) @ _22=&_1 @ RefThe type is []
+    _21 = <std::sync::Arc<std::sync::Mutex<i32>> as std::ops::Deref>::deref(move _22) -> [return: bb12, unwind: bb27] @ Call: FnDid: DefId(2:3101 ~ core[0c3f]::ops::deref::Deref::deref)
+}
+bb 12 {
+CleanUp: false
+    _20 = std::sync::Mutex::<i32>::lock(_21) -> [return: bb13, unwind: bb27] @ Call: FnDid: DefId(1:6375 ~ std[2f0b]::sync::mutex::{impl#5}::lock)
+}
+bb 13 {
+CleanUp: false
+    _19 = std::result::Result::<std::sync::MutexGuard<'_, i32>, std::sync::PoisonError<std::sync::MutexGuard<'_, i32>>>::unwrap(move _20) -> [return: bb14, unwind: bb27] @ Call: FnDid: DefId(2:9195 ~ core[0c3f]::result::{impl#0}::unwrap)
+}
+bb 14 {
+CleanUp: false
+    Assign((_24, &mut _19)) @ _24=&mut _19 @ RefThe type is []
+    _23 = <std::sync::MutexGuard<'_, i32> as std::ops::DerefMut>::deref_mut(move _24) -> [return: bb15, unwind: bb26] @ Call: FnDid: DefId(2:3113 ~ core[0c3f]::ops::deref::DerefMut::deref_mut)
+}
+bb 15 {
+CleanUp: false
+    Assign((_25, CheckedAdd((*_23), const 1_i32))) @ _25=CheckedAdd((*_23), const 1_i32) @ CheckedBinaryOp
+    assert(!move (_25.1: bool), "attempt to compute `{} + {}`, which would overflow", (*_23), const 1_i32) -> [success: bb16, unwind: bb26] @ Assert
+}
+bb 16 {
+CleanUp: false
+    Assign(((*_23), move (_25.0: i32))) @ (*_23)=move (_25.0: i32) @ Use MoveThe type is [Field(0, i32)]
+    Assign((_39, const _)) @ _39=const _ @ Use Constant
+    Assign((_28, _39 as &[&str] (PointerCoercion(Unsize)))) @ _28=_39 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    Assign((_34, &_19)) @ _34=&_19 @ RefThe type is []
+    _33 = <std::sync::MutexGuard<'_, i32> as std::ops::Deref>::deref(move _34) -> [return: bb17, unwind: bb26] @ Call: FnDid: DefId(2:3101 ~ core[0c3f]::ops::deref::Deref::deref)
+}
+bb 17 {
+CleanUp: false
+    _32 = core::fmt::rt::Argument::<'_>::new_display::<i32>(_33) -> [return: bb18, unwind: bb26] @ Call: FnDid: DefId(2:9786 ~ core[0c3f]::fmt::rt::{impl#1}::new_display)
+}
+bb 18 {
+CleanUp: false
+    Assign((_31, [move _32])) @ _31=[move _32] @ Aggregate
+    Assign((_30, &_31)) @ _30=&_31 @ RefThe type is []
+    Assign((_29, _30 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)))) @ _29=_30 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)) @ Cast
+    _27 = std::fmt::Arguments::<'_>::new_v1(move _28, move _29) -> [return: bb19, unwind: bb26] @ Call: FnDid: DefId(2:9866 ~ core[0c3f]::fmt::{impl#2}::new_v1)
+}
+bb 19 {
+CleanUp: false
+    _26 = std::io::_print(move _27) -> [return: bb20, unwind: bb26] @ Call: FnDid: DefId(1:3326 ~ std[2f0b]::io::stdio::_print)
+}
+bb 20 {
+CleanUp: false
+    Assign((_38, const _)) @ _38=const _ @ Use Constant
+    Assign((_37, _38 as &[&str] (PointerCoercion(Unsize)))) @ _37=_38 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    _36 = std::fmt::Arguments::<'_>::new_const(move _37) -> [return: bb21, unwind: bb26] @ Call: FnDid: DefId(2:9865 ~ core[0c3f]::fmt::{impl#2}::new_const)
+}
+bb 21 {
+CleanUp: false
+    _35 = std::io::_print(move _36) -> [return: bb22, unwind: bb26] @ Call: FnDid: DefId(1:3326 ~ std[2f0b]::io::stdio::_print)
+}
+bb 22 {
+CleanUp: false
+    drop(_19) -> [return: bb23, unwind: bb27] @ Drop
+}
+bb 23 {
+CleanUp: false
+    drop(_3) -> [return: bb24, unwind: bb28] @ Drop
+}
+bb 24 {
+CleanUp: false
+    drop(_1) -> [return: bb25, unwind continue] @ Drop
+}
+bb 25 {
+CleanUp: false
+    return @ Return
+}
+bb 26 {
+CleanUp: true
+    drop(_19) -> [return: bb27, unwind terminate(cleanup)] @ Drop
+}
+bb 27 {
+CleanUp: true
+    drop(_3) -> [return: bb28, unwind terminate(cleanup)] @ Drop
+}
+bb 28 {
+CleanUp: true
+    drop(_1) -> [return: bb29, unwind terminate(cleanup)] @ Drop
+}
+bb 29 {
+CleanUp: true
+    resume @ UnwindResume
+}

@@ -52,7 +52,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
     } 
 
     fn after_run(&self){
-        self.alias_graph.print_graph();
+        // self.alias_graph.print_graph();
     }
 
     fn init_func(&mut self, def_id: &DefId, body: &Body){
@@ -65,16 +65,20 @@ impl<'tcx> AliasAnalysis<'tcx> {
         }
         self.control_flow_graph.entry(def_id.clone()).or_insert(reverse_post_order);
         set_local_id(body.local_decls.len());
+        // create node for each parameter
+        for index in 0..body.arg_count{
+            self.alias_graph.get_or_insert_node(GraphNodeId::new(def_id.clone(), Some(index + 1)));
+        }
     }
 
     fn intra_procedural_analysis(&mut self){
         // traverse the functions in a reversed topo order 
         for def_id in self.call_graph.collector.functions(){
             if self.tcx.is_mir_available(def_id){
-                // each function is analyzed only once
-                let body = self.tcx.optimized_mir(def_id);
-                // println!("Now analyze function {:?}, {:?}", body.span, self.tcx.def_path_str(def_id));
                 if self.tcx.def_path(def_id).data.len() == 1{
+                    // each function is analyzed only once
+                    println!("Now analyze function {:?}", self.tcx.def_path_str(def_id));
+                    let body = self.tcx.optimized_mir(def_id);
                     // only analyze functions defined in current crate
                     // FIXME: closure?
                     self.visit_body(def_id, body);
@@ -146,7 +150,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
             Rvalue::ThreadLocalRef(_) => todo!(),
             Rvalue::Len(_) => todo!(),
             Rvalue::Cast(_, _, _) => (),
-            Rvalue::Discriminant(_) => todo!(),
+            Rvalue::Discriminant(p) => self.visit_copy_or_move(def_id, lhs, p),
             Rvalue::Aggregate(_, _) => (), // TODO: 直接创建struct时
             Rvalue::ShallowInitBox(_, _) => todo!(),
             Rvalue::CopyForDeref(p) => {
@@ -205,15 +209,21 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                 mir::Operand::Constant(_) => todo!(),
                                                 mir::Operand::Copy(p) |
                                                 mir::Operand::Move(p) => {
-                                                    // if the lock_ref is from the parameters, lock_ref will have no out_vertices
+                                                    // if the lock_ref is from the parameters, lock_ref may have no out_vertices
                                                     let guard = self.alias_graph.resolve_project(def_id, destination);
-                                                    // let lock_ref = self.alias_graph.resolve_project(def_id, p);
+                                                    let lock_ref = self.alias_graph.resolve_project(def_id, p);
                                                     // guard = mutex::lock( lock_ref )
                                                     // lock_ref is &mutex, so need to get its deref target
-                                                    // unsafe{
-                                                    //     let lock = (*lock_ref).get_out_vertex(&EdgeLabel::Deref).unwrap();
-                                                    //     (*guard).add_target(lock, EdgeLabel::from("Guard"));
-                                                    // }
+                                                    unsafe{
+                                                        if let Some(lock) = (*lock_ref).get_out_vertex(&EdgeLabel::Deref){
+                                                            (*guard).add_target(lock, EdgeLabel::from("Guard"));
+                                                        }
+                                                        else{
+                                                            let lock = self.alias_graph.get_or_insert_node(GraphNodeId::new(def_id.clone(), None));
+                                                            (*lock_ref).add_target(lock, EdgeLabel::Deref);
+                                                            (*guard).add_target(lock, EdgeLabel::from("Guard"));
+                                                        }
+                                                    }
                                                 },
                                             }
                                         }
@@ -265,8 +275,15 @@ impl<'tcx> AliasAnalysis<'tcx> {
                                                 let clone = self.alias_graph.resolve_project(def_id, destination);
                                                 let cloned_ref = self.alias_graph.resolve_project(def_id, p);
                                                 unsafe{
-                                                    let cloned = (*cloned_ref).get_out_vertex(&EdgeLabel::Deref).unwrap();
-                                                    self.make_alias(cloned, clone);
+                                                    // if the clone_ref is from the parameters, clone_ref may have no out_vertices
+                                                    if let Some(cloned) = (*cloned_ref).get_out_vertex(&EdgeLabel::Deref){
+                                                        self.make_alias(cloned, clone);
+                                                    }
+                                                    else{
+                                                        let cloned = self.alias_graph.get_or_insert_node(GraphNodeId::new(def_id.clone(), None));
+                                                        (*cloned_ref).add_target(cloned, EdgeLabel::Deref);
+                                                        self.make_alias(cloned, clone);
+                                                    }
                                                 }
                                             },
                                         }
@@ -309,7 +326,7 @@ impl<'tcx> AliasAnalysis<'tcx> {
                     let callee_ret = self.alias_graph.get_or_insert_node(GraphNodeId::new(callee.clone(), Some(0)));
                     self.make_alias(ret_node, callee_ret);
                     // 2. add args' constrain
-                    assert_eq!(call.args().len(), self.tcx.optimized_mir(callee).arg_count);
+                    // assert_eq!(call.args().len(), self.tcx.optimized_mir(callee).arg_count);
                     for (index, arg) in call.args().iter().enumerate(){
                         match arg{
                             mir::Operand::Copy(p) |

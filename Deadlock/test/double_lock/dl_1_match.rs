@@ -6,17 +6,19 @@ fn main() {
 
     // 第一次锁定 Mutex
     let result = match lock.lock() {
-        Ok(mut num) => {
-            *num += 1;
-            println!("First lock acquired, value: {}", *num);
+        Ok(_) => {
+            // *num += 1;
+            // println!("First lock acquired, value: {}", *num);
 
             // 第二次尝试锁定同一个 Mutex，导致死锁
             match lock.lock() {
-                Ok(mut num_again) => {
-                    *num_again += 1;
-                    println!("Second lock acquired, value: {}", *num_again);
+                Ok(_) => {
+                    // *num_again += 1;
+                    // println!("Second lock acquired, value: {}", *num_again);
                 }
-                Err(_) => println!("Failed to acquire second lock"),
+                Err(_) => {
+                    // println!("Failed to acquire second lock"),
+                }
             }
 
             Ok(())
