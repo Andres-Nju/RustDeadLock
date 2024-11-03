@@ -90,16 +90,26 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     pub fn print_lock_set_facts(&self) {
         for (def_id, summaries) in &self.lock_set_facts {
             println!("DefId: {:?}", def_id);
-            for (index, summary) in summaries {
+            let mut keys: Vec<usize> = summaries.keys().cloned().collect();
+            keys.sort();
+            for index in keys{
+                let summary = summaries.get(&index).unwrap();
                 println!("  Index: {}", index);
                 for (i, lock_set) in summary.iter().enumerate() {
                     println!("    Lock Summary {:?}:", i);
                     for lock_fact in lock_set {
-                        println!("      Lock: {:?}, Acquired: {:?}, State: {:?}, Location: {:?}",
+                        let is_acq;
+                        if lock_fact.is_acquisition{
+                            is_acq = "+";
+                        }
+                        else {
+                            is_acq = "-";
+                        }
+                        println!("      Lock: {:?}, Location: {:?}, {:?}, {:?}",
                                  lock_fact.lock,
-                                 lock_fact.is_acquisition,
-                                 lock_fact.state,
-                                 lock_fact.s_location);
+                                 lock_fact.s_location,
+                                 is_acq,
+                                 lock_fact.state as i32);
                     }
                 }
             }
@@ -216,7 +226,47 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 }
             },
             rustc_middle::mir::TerminatorKind::Drop { place, .. } => {
-                
+                let dropped = self.alias_graph.resolve_project(def_id, place);
+                unsafe{
+                    if let Some(lock) = (*dropped).get_out_vertex(&EdgeLabel::Guard){
+                        let alias_locks = (*lock).get_alias_set();
+                        if (*alias_locks).len() == 1{ 
+                            // if the variable points to more than one locks, skip it
+                            let lock_id = (**(*alias_locks).iter().next().unwrap()).id.clone();
+                            let lock = Lock::new(lock_id.def_id, lock_id.index);
+                            let mut flag = false;
+                            let mut new_lock_set_fact = FxHashSet::default();
+                            for lock_fact_set in self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap().iter_mut(){
+                                for lock_fact in lock_fact_set.clone().into_iter(){
+                                    if lock_fact.is_acquisition == true && lock_fact.lock == lock && lock_fact.state == false{
+                                        flag = true;
+                                        if let Some(mut u) = lock_fact_set.take(&lock_fact){
+                                            u.state = true;
+                                            lock_fact_set.insert(u);
+                                        }
+                                        let new_fact = LockFact{
+                                            is_acquisition: false,
+                                            state: true,
+                                            s_location: (def_id.clone(), body.terminator_loc(BasicBlock::from_usize(bb_index))),
+                                            lock: lock.clone(),
+                                        };
+                                        new_lock_set_fact.insert(new_fact);
+                                    }
+                                }
+                            }
+                            if !flag{
+                                let new_fact = LockFact{
+                                    is_acquisition: false,
+                                    state: false,
+                                    s_location: (def_id.clone(), body.terminator_loc(BasicBlock::from_usize(bb_index))),
+                                    lock: lock.clone(),
+                                };
+                                new_lock_set_fact.insert(new_fact);
+                            }
+                            self.lock_set_facts.get_mut(def_id).unwrap().get_mut(&bb_index).unwrap().push(new_lock_set_fact);
+                        }
+                    }
+                }
             },
             _ => {}
         }
@@ -229,28 +279,5 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 }
     
     
-//     fn print_lock_facts(&self){
-//         let mut grouped_map: FxHashMap<DefId, Vec<(usize, &Vec<FxHashSet<Rc<LockFact>>>)>> = FxHashMap::default();
-//         for (def_id, value) in &self.lock_set_facts {
-//             for (key_usize, value) in value{
-//                 grouped_map
-//                 .entry(def_id.clone())
-//                 .or_insert_with(Vec::new)
-//                 .push((*key_usize, value));
-//             }
-//         }
-
-//         println!("Lock set facts: ");
-//         for (def_id, mut vec) in grouped_map {
-//             vec.sort_by_key(|k| k.0); 
-//             println!("{:?}:", def_id);
-//             for (key_usize, value) in vec {
-//                 println!("bb {} -> {:?}", key_usize, value);
-//             }
-//             println!();
-//         }
-//     }
-// }
-
 
 

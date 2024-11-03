@@ -31,6 +31,7 @@ impl LockGraph {
                 .push(to);
         }
     }
+    // todo: statement location -> statement location
 
     pub fn print_loops(&self){
         for lo in self.find_all_cycles(){
