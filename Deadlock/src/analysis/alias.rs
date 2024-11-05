@@ -73,11 +73,11 @@ impl<'tcx> AliasAnalysis<'tcx> {
 
     fn intra_procedural_analysis(&mut self){
         // traverse the functions in a reversed topo order 
-        for def_id in self.call_graph.collector.functions(){
+        for def_id in self.call_graph.topo.clone(){
             if self.tcx.is_mir_available(def_id){
-                if self.tcx.def_path(def_id).data.len() == 1{
+                if def_id.is_local() && self.control_flow_graph.get(&def_id) == None{
                     // each function is analyzed only once
-                    println!("Now analyze function {:?}", self.tcx.def_path_str(def_id));
+                    println!("Now analyze function {:?}'s alias information", self.tcx.def_path_str(def_id));
                     let body = self.tcx.optimized_mir(def_id);
                     // only analyze functions defined in current crate
                     // FIXME: closure?

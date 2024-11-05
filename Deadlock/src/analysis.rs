@@ -81,7 +81,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     } 
 
     fn after_run(&self){
-        // self.alias_graph.print_graph();
+        self.alias_graph.print_graph();
         self.print_lock_set_facts();
         println!("lock graph:\n{:?}", self.lock_graph);
         self.lock_graph.print_loops();
@@ -122,8 +122,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
             if self.tcx.is_mir_available(def_id){
                 // each function is analyzed only once
                 let body = self.tcx.optimized_mir(def_id);
-                println!("Now analyze function {:?}, {:?}", body.span, self.tcx.def_path_str(def_id));
-                if self.tcx.def_path(def_id).data.len() == 1{
+                if def_id.is_local() && self.lock_set_facts.get(&def_id) == None{
+                    println!("Now analyze function {:?}, {:?}", body.span, self.tcx.def_path_str(def_id));
                     // only analyze functions defined in current crate
                     // FIXME: closure?
                     self.lock_set_facts.entry(def_id.clone()).or_insert(FxHashMap::default());

@@ -326,6 +326,7 @@ pub enum EdgeLabel{
     Deref,
     Guard,
     // todo: field, array access
+    Field(usize),
 }
 
 impl From<&str> for EdgeLabel {
@@ -335,5 +336,10 @@ impl From<&str> for EdgeLabel {
             "Guard" => EdgeLabel::Guard,
             _ => panic!("Unknown edge label!"),
         }
+    }
+}
+impl EdgeLabel{
+    pub fn new_field(field_idx: usize) -> Self{
+        EdgeLabel::Field(field_idx)
     }
 }

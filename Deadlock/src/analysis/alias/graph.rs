@@ -229,7 +229,6 @@ impl AliasGraph{
                     mir::ProjectionElem::Deref => { // (*p).* ... get q of all p --deref--> q; if there's no such q, create one
                         let deref_label = EdgeLabel::Deref;
                         if let Some(targets) = (*cur_node).get_out_vertices(&deref_label){
-                            // current_node_set = targets;
                             // if the set is empty
                             if (*targets).is_empty(){
                                 let target_node = self.add_node(GraphNodeId::new(def_id.clone(), None));
@@ -249,7 +248,28 @@ impl AliasGraph{
                             cur_node = target_node;
                         }
                     },
-                    mir::ProjectionElem::Field(_, _) => (),
+                    mir::ProjectionElem::Field(field_idx, _) => {
+                        let field_label = EdgeLabel::new_field(field_idx.as_usize());
+                        if let Some(targets) = (*cur_node).get_out_vertices(&field_label){
+                            // if the set is empty
+                            if (*targets).is_empty(){
+                                let target_node = self.add_node(GraphNodeId::new(def_id.clone(), None));
+                                (*cur_node).add_target(target_node, field_label);
+                                // (*current_node_set).insert(target_node);
+                                cur_node = target_node;
+                            }
+                            else {
+                                cur_node = *(*targets).iter().next().unwrap();
+                            }
+                        }
+                        else { 
+                            let target_id = GraphNodeId::new(def_id.clone(), None);
+                            let target_node = self.add_node(target_id);
+                            (*cur_node).add_target(target_node, field_label);
+                            // (*current_node_set).insert(target_node);
+                            cur_node = target_node;
+                        }
+                    },
                     mir::ProjectionElem::Index(_) => todo!(),
                     mir::ProjectionElem::ConstantIndex { .. } => todo!(),
                     mir::ProjectionElem::Subslice { .. } => todo!(),
