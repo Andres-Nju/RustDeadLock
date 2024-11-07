@@ -273,7 +273,7 @@ impl AliasGraph{
                     mir::ProjectionElem::Index(_) => todo!(),
                     mir::ProjectionElem::ConstantIndex { .. } => todo!(),
                     mir::ProjectionElem::Subslice { .. } => todo!(),
-                    mir::ProjectionElem::Downcast(_, _) => todo!(),
+                    mir::ProjectionElem::Downcast(_, _) => (),
                     mir::ProjectionElem::OpaqueCast(_) => todo!(),
                     mir::ProjectionElem::Subtype(_) => todo!(),
                 }

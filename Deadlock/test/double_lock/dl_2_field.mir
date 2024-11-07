@@ -2,21 +2,22 @@ DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price)
 _0:  @ std::result::Result<bool, &ReErased str> 
 _1:  @ &ReErased Miner 
 _2:  @ u32 
-_3:  @ &ReErased GasPricer 
-_4:  @ &ReErased std::sync::MutexGuard<ReErased, GasPricer> 
+_3:  @ &ReErased mut GasPricer 
+_4:  @ &ReErased mut std::sync::MutexGuard<ReErased, GasPricer> 
 _5:  @ std::sync::MutexGuard<ReErased, GasPricer> 
 _6:  @ std::result::Result<std::sync::MutexGuard<ReErased, GasPricer>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, GasPricer>>> 
 _7:  @ &ReErased std::sync::Mutex<GasPricer> 
 _8:  @ isize 
-_9:  @ () 
-_10:  @ &ReErased mut GasPricer 
-_11:  @ &ReErased mut std::sync::MutexGuard<ReErased, GasPricer> 
-_12:  @ std::sync::MutexGuard<ReErased, GasPricer> 
-_13:  @ std::result::Result<std::sync::MutexGuard<ReErased, GasPricer>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, GasPricer>>> 
-_14:  @ &ReErased std::sync::Mutex<GasPricer> 
-_15:  @ &ReErased str 
+_9:  @ &ReErased mut u32 
+_10:  @ () 
+_11:  @ &ReErased mut GasPricer 
+_12:  @ &ReErased mut std::sync::MutexGuard<ReErased, GasPricer> 
+_13:  @ std::sync::MutexGuard<ReErased, GasPricer> 
+_14:  @ std::result::Result<std::sync::MutexGuard<ReErased, GasPricer>, std::sync::PoisonError<std::sync::MutexGuard<ReErased, GasPricer>>> 
+_15:  @ &ReErased std::sync::Mutex<GasPricer> 
+_16:  @ &ReErased str 
 
-[self => _1, new_price => _2]
+[self => _1, new_price => _2, val => _9]
 bb 0 {
 CleanUp: false
     Assign((_7, &((*_1).0: std::sync::Mutex<GasPricer>))) @ _7=&((*_1).0: std::sync::Mutex<GasPricer>) @ RefThe type is [Deref, Field(0, std::sync::Mutex<GasPricer>)]
@@ -28,8 +29,8 @@ CleanUp: false
 }
 bb 2 {
 CleanUp: false
-    Assign((_4, &_5)) @ _4=&_5 @ RefThe type is []
-    _3 = <std::sync::MutexGuard<'_, GasPricer> as std::ops::Deref>::deref(move _4) -> [return: bb3, unwind: bb14] @ Call: FnDid: DefId(2:3101 ~ core[0c3f]::ops::deref::Deref::deref)
+    Assign((_4, &mut _5)) @ _4=&mut _5 @ RefThe type is []
+    _3 = <std::sync::MutexGuard<'_, GasPricer> as std::ops::DerefMut>::deref_mut(move _4) -> [return: bb3, unwind: bb14] @ Call: FnDid: DefId(2:3113 ~ core[0c3f]::ops::deref::DerefMut::deref_mut)
 }
 bb 3 {
 CleanUp: false
@@ -38,31 +39,33 @@ CleanUp: false
 }
 bb 4 {
 CleanUp: false
-    Assign((_15, const "Gas pricer already calibrated")) @ _15=const "Gas pricer already calibrated" @ Use Constant
-    Assign((_0, std::result::Result::<bool, &str>::Err(_15))) @ _0=std::result::Result::<bool, &str>::Err(_15) @ Aggregate
+    Assign((_16, const "Gas pricer already calibrated")) @ _16=const "Gas pricer already calibrated" @ Use Constant
+    Assign((_0, std::result::Result::<bool, &str>::Err(_16))) @ _0=std::result::Result::<bool, &str>::Err(_16) @ Aggregate
     goto -> bb11 @ Goto
 }
 bb 5 {
 CleanUp: false
-    Assign((_14, &((*_1).0: std::sync::Mutex<GasPricer>))) @ _14=&((*_1).0: std::sync::Mutex<GasPricer>) @ RefThe type is [Deref, Field(0, std::sync::Mutex<GasPricer>)]
-    _13 = std::sync::Mutex::<GasPricer>::lock(move _14) -> [return: bb6, unwind: bb14] @ Call: FnDid: DefId(1:6375 ~ std[2f0b]::sync::mutex::{impl#5}::lock)
+    Assign((_9, &mut (((*_3) as Fixed).0: u32))) @ _9=&mut (((*_3) as Fixed).0: u32) @ RefThe type is [Deref, Downcast(Some("Fixed"), 0), Field(0, u32)]
+    Assign(((*_9), _2)) @ (*_9)=_2 @ Use CopyThe type is []
+    Assign((_15, &((*_1).0: std::sync::Mutex<GasPricer>))) @ _15=&((*_1).0: std::sync::Mutex<GasPricer>) @ RefThe type is [Deref, Field(0, std::sync::Mutex<GasPricer>)]
+    _14 = std::sync::Mutex::<GasPricer>::lock(move _15) -> [return: bb6, unwind: bb14] @ Call: FnDid: DefId(1:6375 ~ std[2f0b]::sync::mutex::{impl#5}::lock)
 }
 bb 6 {
 CleanUp: false
-    _12 = std::result::Result::<std::sync::MutexGuard<'_, GasPricer>, std::sync::PoisonError<std::sync::MutexGuard<'_, GasPricer>>>::unwrap(move _13) -> [return: bb7, unwind: bb14] @ Call: FnDid: DefId(2:9195 ~ core[0c3f]::result::{impl#0}::unwrap)
+    _13 = std::result::Result::<std::sync::MutexGuard<'_, GasPricer>, std::sync::PoisonError<std::sync::MutexGuard<'_, GasPricer>>>::unwrap(move _14) -> [return: bb7, unwind: bb14] @ Call: FnDid: DefId(2:9195 ~ core[0c3f]::result::{impl#0}::unwrap)
 }
 bb 7 {
 CleanUp: false
-    Assign((_11, &mut _12)) @ _11=&mut _12 @ RefThe type is []
-    _10 = <std::sync::MutexGuard<'_, GasPricer> as std::ops::DerefMut>::deref_mut(move _11) -> [return: bb8, unwind: bb13] @ Call: FnDid: DefId(2:3113 ~ core[0c3f]::ops::deref::DerefMut::deref_mut)
+    Assign((_12, &mut _13)) @ _12=&mut _13 @ RefThe type is []
+    _11 = <std::sync::MutexGuard<'_, GasPricer> as std::ops::DerefMut>::deref_mut(move _12) -> [return: bb8, unwind: bb13] @ Call: FnDid: DefId(2:3113 ~ core[0c3f]::ops::deref::DerefMut::deref_mut)
 }
 bb 8 {
 CleanUp: false
-    _9 = GasPricer::recalibrate(_10) -> [return: bb9, unwind: bb13] @ Call: FnDid: DefId(0:18 ~ dl_2_field[256e]::{impl#1}::recalibrate)
+    _10 = GasPricer::recalibrate(_11) -> [return: bb9, unwind: bb13] @ Call: FnDid: DefId(0:18 ~ dl_2_field[256e]::{impl#1}::recalibrate)
 }
 bb 9 {
 CleanUp: false
-    drop(_12) -> [return: bb10, unwind: bb14] @ Drop
+    drop(_13) -> [return: bb10, unwind: bb14] @ Drop
 }
 bb 10 {
 CleanUp: false
@@ -79,7 +82,7 @@ CleanUp: false
 }
 bb 13 {
 CleanUp: true
-    drop(_12) -> [return: bb14, unwind terminate(cleanup)] @ Drop
+    drop(_13) -> [return: bb14, unwind terminate(cleanup)] @ Drop
 }
 bb 14 {
 CleanUp: true
@@ -98,18 +101,31 @@ DefId(0:18 ~ dl_2_field[256e]::{impl#1}::recalibrate)
 _0:  @ () 
 _1:  @ &ReErased mut GasPricer 
 _2:  @ isize 
+_3:  @ &ReErased mut u32 
+_4:  @ (u32, bool) 
 
-[self => _1]
+[self => _1, val => _3]
 bb 0 {
 CleanUp: false
     Assign((_2, discriminant((*_1)))) @ _2=discriminant((*_1)) @ Discriminant
-    switchInt(move _2) -> [0: bb1, 1: bb1, otherwise: bb2] @ SwitchInt
+    switchInt(move _2) -> [0: bb1, 1: bb3, otherwise: bb4] @ SwitchInt
 }
 bb 1 {
 CleanUp: false
-    return @ Return
+    Assign((_3, &mut (((*_1) as Fixed).0: u32))) @ _3=&mut (((*_1) as Fixed).0: u32) @ RefThe type is [Deref, Downcast(Some("Fixed"), 0), Field(0, u32)]
+    Assign((_4, CheckedAdd((*_3), const 10_u32))) @ _4=CheckedAdd((*_3), const 10_u32) @ CheckedBinaryOp
+    assert(!move (_4.1: bool), "attempt to compute `{} + {}`, which would overflow", (*_3), const 10_u32) -> [success: bb2, unwind continue] @ Assert
 }
 bb 2 {
+CleanUp: false
+    Assign(((*_3), move (_4.0: u32))) @ (*_3)=move (_4.0: u32) @ Use MoveThe type is [Field(0, u32)]
+    goto -> bb3 @ Goto
+}
+bb 3 {
+CleanUp: false
+    return @ Return
+}
+bb 4 {
 CleanUp: false
     unreachable @ Unreachable
 }
@@ -122,16 +138,28 @@ _3:  @ GasPricer
 _4:  @ std::result::Result<bool, &ReErased str> 
 _5:  @ &ReErased Miner 
 _6:  @ isize 
-_7:  @ () 
-_8:  @ std::fmt::Arguments<ReErased> 
-_9:  @ &ReErased [&ReErased str] 
-_10:  @ () 
-_11:  @ std::fmt::Arguments<ReErased> 
-_12:  @ &ReErased [&ReErased str] 
-_13:  @ &ReErased [&ReErased str; 1_usize] 
-_14:  @ &ReErased [&ReErased str; 1_usize] 
+_7:  @ bool 
+_8:  @ () 
+_9:  @ std::fmt::Arguments<ReErased> 
+_10:  @ &ReErased [&ReErased str] 
+_11:  @ &ReErased [core::fmt::rt::Argument<ReErased>] 
+_12:  @ &ReErased [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_13:  @ [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_14:  @ core::fmt::rt::Argument<ReErased> 
+_15:  @ &ReErased bool 
+_16:  @ &ReErased str 
+_17:  @ () 
+_18:  @ std::fmt::Arguments<ReErased> 
+_19:  @ &ReErased [&ReErased str] 
+_20:  @ &ReErased [core::fmt::rt::Argument<ReErased>] 
+_21:  @ &ReErased [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_22:  @ [core::fmt::rt::Argument<ReErased>; 1_usize] 
+_23:  @ core::fmt::rt::Argument<ReErased> 
+_24:  @ &ReErased &ReErased str 
+_25:  @ &ReErased [&ReErased str; 2_usize] 
+_26:  @ &ReErased [&ReErased str; 2_usize] 
 
-[miner => _1]
+[miner => _1, success => _7, err => _16]
 bb 0 {
 CleanUp: false
     Assign((_3, GasPricer::Fixed(const 100_u32))) @ _3=GasPricer::Fixed(const 100_u32) @ Aggregate
@@ -146,33 +174,51 @@ CleanUp: false
 bb 2 {
 CleanUp: false
     Assign((_6, discriminant(_4))) @ _6=discriminant(_4) @ Discriminant
-    switchInt(move _6) -> [0: bb4, 1: bb3, otherwise: bb8] @ SwitchInt
+    switchInt(move _6) -> [0: bb4, 1: bb3, otherwise: bb10] @ SwitchInt
 }
 bb 3 {
 CleanUp: false
-    Assign((_13, const _)) @ _13=const _ @ Use Constant
-    Assign((_12, _13 as &[&str] (PointerCoercion(Unsize)))) @ _12=_13 as &[&str] (PointerCoercion(Unsize)) @ Cast
-    _11 = std::fmt::Arguments::<'_>::new_const(move _12) -> [return: bb6, unwind continue] @ Call: FnDid: DefId(2:9865 ~ core[0c3f]::fmt::{impl#2}::new_const)
+    Assign((_16, ((_4 as Err).0: &str))) @ _16=((_4 as Err).0: &str) @ Use CopyThe type is [Downcast(Some("Err"), 1), Field(0, &ReErased str)]
+    Assign((_25, const _)) @ _25=const _ @ Use Constant
+    Assign((_19, _25 as &[&str] (PointerCoercion(Unsize)))) @ _19=_25 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    Assign((_24, &_16)) @ _24=&_16 @ RefThe type is []
+    _23 = core::fmt::rt::Argument::<'_>::new_display::<&str>(_24) -> [return: bb7, unwind continue] @ Call: FnDid: DefId(2:9786 ~ core[0c3f]::fmt::rt::{impl#1}::new_display)
 }
 bb 4 {
 CleanUp: false
-    Assign((_14, const _)) @ _14=const _ @ Use Constant
-    Assign((_9, _14 as &[&str] (PointerCoercion(Unsize)))) @ _9=_14 as &[&str] (PointerCoercion(Unsize)) @ Cast
-    _8 = std::fmt::Arguments::<'_>::new_const(move _9) -> [return: bb5, unwind continue] @ Call: FnDid: DefId(2:9865 ~ core[0c3f]::fmt::{impl#2}::new_const)
+    Assign((_7, ((_4 as Ok).0: bool))) @ _7=((_4 as Ok).0: bool) @ Use CopyThe type is [Downcast(Some("Ok"), 0), Field(0, bool)]
+    Assign((_26, const _)) @ _26=const _ @ Use Constant
+    Assign((_10, _26 as &[&str] (PointerCoercion(Unsize)))) @ _10=_26 as &[&str] (PointerCoercion(Unsize)) @ Cast
+    Assign((_15, &_7)) @ _15=&_7 @ RefThe type is []
+    _14 = core::fmt::rt::Argument::<'_>::new_display::<bool>(_15) -> [return: bb5, unwind continue] @ Call: FnDid: DefId(2:9786 ~ core[0c3f]::fmt::rt::{impl#1}::new_display)
 }
 bb 5 {
 CleanUp: false
-    _7 = std::io::_print(move _8) -> [return: bb7, unwind continue] @ Call: FnDid: DefId(1:3326 ~ std[2f0b]::io::stdio::_print)
+    Assign((_13, [move _14])) @ _13=[move _14] @ Aggregate
+    Assign((_12, &_13)) @ _12=&_13 @ RefThe type is []
+    Assign((_11, _12 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)))) @ _11=_12 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)) @ Cast
+    _9 = std::fmt::Arguments::<'_>::new_v1(move _10, move _11) -> [return: bb6, unwind continue] @ Call: FnDid: DefId(2:9866 ~ core[0c3f]::fmt::{impl#2}::new_v1)
 }
 bb 6 {
 CleanUp: false
-    _10 = std::io::_print(move _11) -> [return: bb7, unwind continue] @ Call: FnDid: DefId(1:3326 ~ std[2f0b]::io::stdio::_print)
+    _8 = std::io::_print(move _9) -> [return: bb9, unwind continue] @ Call: FnDid: DefId(1:3326 ~ std[2f0b]::io::stdio::_print)
 }
 bb 7 {
 CleanUp: false
-    return @ Return
+    Assign((_22, [move _23])) @ _22=[move _23] @ Aggregate
+    Assign((_21, &_22)) @ _21=&_22 @ RefThe type is []
+    Assign((_20, _21 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)))) @ _20=_21 as &[core::fmt::rt::Argument<'_>] (PointerCoercion(Unsize)) @ Cast
+    _18 = std::fmt::Arguments::<'_>::new_v1(move _19, move _20) -> [return: bb8, unwind continue] @ Call: FnDid: DefId(2:9866 ~ core[0c3f]::fmt::{impl#2}::new_v1)
 }
 bb 8 {
+CleanUp: false
+    _17 = std::io::_print(move _18) -> [return: bb9, unwind continue] @ Call: FnDid: DefId(1:3326 ~ std[2f0b]::io::stdio::_print)
+}
+bb 9 {
+CleanUp: false
+    return @ Return
+}
+bb 10 {
 CleanUp: false
     unreachable @ Unreachable
 }
@@ -198,241 +244,3 @@ CleanUp: false
     Assign((_0, GasPricer::Calibrated(move _1))) @ _0=GasPricer::Calibrated(move _1) @ Aggregate
     return @ Return
 }
-
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 1 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 1 }
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 5 }
-  Out Labels:
-    - Deref
-  In Labels:
-  Successors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 17 }
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 17 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 17 }
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 1 }
-  Out Labels:
-    - Field(0)
-  In Labels:
-    - Deref
-  Successors:
-    - Label: Field(0)
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 18 }
-  Predecessors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 1 }
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 6 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 6 }
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 5 }
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 3 }
-  Out Labels:
-    - Deref
-    - Guard
-  In Labels:
-    - Deref
-  Successors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 19 }
-    - Label: Guard
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 18 }
-  Predecessors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 4 }
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 4 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 4 }
-  Out Labels:
-    - Deref
-  In Labels:
-  Successors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 6 }
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 14 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 14 }
-  Out Labels:
-    - Deref
-  In Labels:
-  Successors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 18 }
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 19 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 19 }
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 8 }
-  Out Labels:
-  In Labels:
-    - Deref
-  Successors:
-  Predecessors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 6 }
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 13 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 13 }
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 12 }
-  Out Labels:
-    - Guard
-  In Labels:
-    - Deref
-  Successors:
-    - Label: Guard
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 18 }
-  Predecessors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 11 }
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 15 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 15 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 9 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 9 }
-    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ dl_2_field[256e]::{impl#1}::recalibrate), index: 0 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(2:9865 ~ core[0c3f]::fmt::{impl#2}::new_const), index: 1 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(2:9865 ~ core[0c3f]::fmt::{impl#2}::new_const), index: 1 }
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 9 }
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 12 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 2 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 2 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 7 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 7 }
-  Out Labels:
-    - Deref
-  In Labels:
-  Successors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 18 }
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 18 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 18 }
-  Out Labels:
-  In Labels:
-    - Deref
-    - Field(0)
-    - Guard
-  Successors:
-  Predecessors:
-    - Label: Field(0)
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 17 }
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 7 }
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 14 }
-    - Label: Guard
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 6 }
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 13 }
-
-Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 11 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 11 }
-    - Node ID: GraphNodeId { def_id: DefId(2:3113 ~ core[0c3f]::ops::deref::DerefMut::deref_mut), index: 1 }
-  Out Labels:
-    - Deref
-  In Labels:
-  Successors:
-    - Label: Deref
-      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 13 }
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 2 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 2 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 10 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 10 }
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 7 }
-    - Node ID: GraphNodeId { def_id: DefId(1:3326 ~ std[2f0b]::io::stdio::_print), index: 0 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 6 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 6 }
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 4 }
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 0 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 14 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 14 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 13 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 13 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(0:18 ~ dl_2_field[256e]::{impl#1}::recalibrate), index: 1 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ dl_2_field[256e]::{impl#1}::recalibrate), index: 1 }
-    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ dl_2_field[256e]::{impl#0}::set_minimal_gas_price), index: 10 }
-    - Node ID: GraphNodeId { def_id: DefId(2:3113 ~ core[0c3f]::ops::deref::DerefMut::deref_mut), index: 0 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
-
-Node ID: GraphNodeId { def_id: DefId(1:3326 ~ std[2f0b]::io::stdio::_print), index: 1 }
-  Alias Set:
-    - Node ID: GraphNodeId { def_id: DefId(1:3326 ~ std[2f0b]::io::stdio::_print), index: 1 }
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 8 }
-    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ dl_2_field[256e]::main), index: 11 }
-    - Node ID: GraphNodeId { def_id: DefId(2:9865 ~ core[0c3f]::fmt::{impl#2}::new_const), index: 0 }
-  Out Labels:
-  In Labels:
-  Successors:
-  Predecessors:
