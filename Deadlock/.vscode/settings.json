@@ -2,8 +2,11 @@
     "rust-analyzer.rustc.source": "discover",
     "rust-analyzer.linkedProjects": [
         "./Cargo.toml",
-        "./Cargo.toml",
-        "./Cargo.toml"
     ],
-    "rust-analyzer.showUnlinkedFileNotification": false
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "editor.formatOnSave": true,
+    "notebook.formatOnSave.enabled": true,
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    }
 }

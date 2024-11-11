@@ -1,9 +1,7 @@
 #![feature(rustc_private)]
 #![feature(box_patterns)]
 
-extern crate pretty_env_logger;
 #[macro_use]
-extern crate log;
 extern crate lazy_static;
 
 extern crate rustc_ast_pretty;
@@ -27,20 +25,3 @@ mod driver;
 mod context;
 mod utils;
 mod analysis;
-// mod model;
-
-use option::Options;
-use structopt::StructOpt;
-
-fn main() {
-    // 初始化logger，log使用方式请见README.md
-    pretty_env_logger::init();
-    info!("Begin to run RustProbe!");
-
-    // 利用structopt从命令行参数中解析出options
-    let rust_probe_options = Options::from_args();
-
-    // 创建驱动实例并运行
-    let mut driver = driver::Driver::new(&rust_probe_options);
-    driver.run_driver();
-}

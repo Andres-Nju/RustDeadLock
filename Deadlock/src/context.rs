@@ -40,9 +40,9 @@ impl<'tcx> Context<'tcx> {
                 DefKind::Fn | DefKind::AssocFn => {
                     let name = tcx.item_name(def_id);
                     if !all_funcs.contains_key(&def_id) {
-                        if name.to_string() == options.entry_func {
-                            entry_func = Some(def_id);
-                        }
+                        // if name.to_string() == options.entry_func {
+                        //     entry_func = Some(def_id);
+                        // }
                         all_funcs.insert(def_id, name);
                     }
                 }

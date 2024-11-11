@@ -7,9 +7,7 @@ use structopt::StructOpt;
 
 use crate::{
     analysis::{
-        alias::{
-            AliasAnalysis
-        }, 
+        alias::AliasAnalysis, 
         callgraph::CallGraph, 
         LockSetAnalysis
     }, 
@@ -65,19 +63,13 @@ pub(crate) trait AnalysisPass: Send {
 /// 驱动器，里面有
 /// 1. 分析/编译选项
 /// 2. 分析策略
-pub(crate) struct Driver {
+pub(crate) struct MyCallBacks {
     options: Options,
     strategy: FxHashMap<String, Strategy>,
 }
 
-impl Driver {
-    /// 根据传入的Option创建一个驱动程序
+impl MyCallBacks {
     pub(crate) fn new(options: &Options) -> Self {
-        if options.input_dir.is_none() {
-            Options::clap().print_long_help().unwrap();
-            process::exit(0);
-        }
-
         Self {
             options: options.clone(),
             strategy: FxHashMap::default(),
@@ -151,10 +143,6 @@ impl Driver {
     /// 3. ...
     pub(crate) fn run_driver(&mut self) {
         let config = self.get_rustc_config();
-
-        //let driver_mutex = Arc::new(Mutex::new(self));
-        // 调用rustc接口，运行编译器
-        // 官方手册：https://rustc-dev-guide.rust-lang.org/rustc-driver.html
         rustc_interface::run_compiler(config, |compiler| {
             compiler.enter(|queries| {
                 //let mut driver = driver_mutex.lock().unwrap();
@@ -213,4 +201,8 @@ impl Driver {
             using_internal_features: Arc::default(),
         }
     }
+}
+
+impl rustc_driver::Callbacks for MyCallBacks{
+    
 }
