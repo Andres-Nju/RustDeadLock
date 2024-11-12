@@ -1,5 +1,4 @@
 #![feature(rustc_private)]
-#![feature(box_patterns)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -19,9 +18,10 @@ extern crate rustc_span;
 extern crate rustc_target;
 extern crate rustc_type_ir;
 
-
-mod option;
-mod driver;
-mod context;
-mod utils;
 mod analysis;
+mod context;
+mod driver;
+mod option;
+mod utils;
+
+pub use driver::MyDriver;

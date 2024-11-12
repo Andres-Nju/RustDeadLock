@@ -1,9 +1,16 @@
-use std::{rc::Rc, cell::{Ref, RefCell, RefMut}, fmt::Debug, sync::Mutex, hash::Hash};
+use std::{
+    cell::{Ref, RefCell, RefMut},
+    fmt::Debug,
+    hash::Hash,
+    rc::Rc,
+    sync::Mutex,
+};
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use rustc_hir::def_id::DefId;
+
 use lazy_static::lazy_static;
-lazy_static!{
+lazy_static! {
     static ref LOCAL_INDEX: Mutex<usize> = Mutex::new(0);
 }
 
@@ -23,13 +30,11 @@ pub fn set_local_id(num: usize) {
     *id = num;
 }
 
-
-pub struct AliasGraphNode{
+pub struct AliasGraphNode {
     pub id: GraphNodeId,
     // pub name: Option<String>,
-
     pub alias_set: *mut FxHashSet<*mut AliasGraphNode>,
-    
+
     pub out_labels: FxHashSet<EdgeLabel>,
     pub in_labels: FxHashSet<EdgeLabel>,
 
@@ -39,14 +44,16 @@ pub struct AliasGraphNode{
     pub predecessors: *mut FxHashMap<EdgeLabel, *mut FxHashSet<*mut AliasGraphNode>>,
 }
 
-impl Debug for AliasGraphNode{
+impl Debug for AliasGraphNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unsafe{
-            f.debug_struct("AliasGraphNode").field("id", &self.id).finish()
+        unsafe {
+            f.debug_struct("AliasGraphNode")
+                .field("id", &self.id)
+                .finish()
         }
     }
 }
-impl AliasGraphNode{
+impl AliasGraphNode {
     pub fn new(id: GraphNodeId) -> *mut AliasGraphNode {
         let alias_set = Box::new(FxHashSet::default());
         let out_labels = FxHashSet::default();
@@ -76,7 +83,7 @@ impl AliasGraphNode{
     // }
 
     // Get the number of outgoing vertices for a given label
-    pub fn out_num_vertices(&self, label:&EdgeLabel) -> usize {
+    pub fn out_num_vertices(&self, label: &EdgeLabel) -> usize {
         unsafe {
             let out_map = &*self.successors; // Dereference to get the map
             if let Some(vertices) = out_map.get(&label) {
@@ -88,7 +95,7 @@ impl AliasGraphNode{
     }
 
     // Get the number of incoming vertices for a given label
-    pub fn in_num_vertices(&self, label:&EdgeLabel) -> usize {
+    pub fn in_num_vertices(&self, label: &EdgeLabel) -> usize {
         unsafe {
             let in_map = &*self.predecessors; // Dereference to get the map
             if let Some(vertices) = in_map.get(&label) {
@@ -121,9 +128,11 @@ impl AliasGraphNode{
     // Add a target node with a label
     pub fn add_target(&mut self, node: *mut AliasGraphNode, label: EdgeLabel) {
         unsafe {
-            let out_map = &mut *self.successors; 
+            let out_map = &mut *self.successors;
             self.out_labels.insert(label);
-            let out_nodes = &mut **out_map.entry(label).or_insert_with(|| Box::into_raw(Box::new(FxHashSet::default())));
+            let out_nodes = &mut **out_map
+                .entry(label)
+                .or_insert_with(|| Box::into_raw(Box::new(FxHashSet::default())));
             out_nodes.insert(node);
             (*node).add_source(self as *mut _, label);
         }
@@ -142,24 +151,28 @@ impl AliasGraphNode{
     }
 
     // Check if the node contains a specific target node
-    pub fn contains_target(&self, target: *mut AliasGraphNode, label:&EdgeLabel) -> bool {
+    pub fn contains_target(&self, target: *mut AliasGraphNode, label: &EdgeLabel) -> bool {
         unsafe {
-            (*self.successors).get(&label).map_or(false, |set| (&mut **set).contains(&target))
+            (*self.successors)
+                .get(&label)
+                .map_or(false, |set| (&mut **set).contains(&target))
         }
     }
 
     // Get the set of incoming vertices for a given label
-    pub fn get_in_vertices(&self, label:&EdgeLabel) -> Option<*mut FxHashSet<*mut AliasGraphNode>> {
-        unsafe {
-            (*self.predecessors).get(&label).copied()
-        }
+    pub fn get_in_vertices(
+        &self,
+        label: &EdgeLabel,
+    ) -> Option<*mut FxHashSet<*mut AliasGraphNode>> {
+        unsafe { (*self.predecessors).get(&label).copied() }
     }
 
     // Get the set of outgoing vertices for a given label
-    pub fn get_out_vertices(&self, label:&EdgeLabel) -> Option<*mut FxHashSet<*mut AliasGraphNode>> {
-        unsafe {
-            (*self.successors).get(&label).copied()
-        }
+    pub fn get_out_vertices(
+        &self,
+        label: &EdgeLabel,
+    ) -> Option<*mut FxHashSet<*mut AliasGraphNode>> {
+        unsafe { (*self.successors).get(&label).copied() }
     }
 
     // Get one incoming vertex for a label, if exists
@@ -186,11 +199,9 @@ impl AliasGraphNode{
         }
     }
 
-     // Returns a reference to the alias set
-     pub fn get_alias_set(&self) -> *mut FxHashSet<*mut AliasGraphNode> {
-        unsafe {
-            self.alias_set
-        }
+    // Returns a reference to the alias set
+    pub fn get_alias_set(&self) -> *mut FxHashSet<*mut AliasGraphNode> {
+        unsafe { self.alias_set }
     }
 
     // Moves the alias set of the current node to the RootRep node
@@ -215,13 +226,15 @@ impl AliasGraphNode{
         unsafe {
             let in_map = &mut *self.predecessors; // Dereference the pointer
             self.in_labels.insert(label);
-            let in_nodes = in_map.entry(label).or_insert_with(|| Box::into_raw(Box::new(FxHashSet::default())));
+            let in_nodes = in_map
+                .entry(label)
+                .or_insert_with(|| Box::into_raw(Box::new(FxHashSet::default())));
             (&mut **in_nodes).insert(node);
         }
     }
 
     // Remove a source node with a label (private function)
-    fn remove_source(&mut self, node: *mut AliasGraphNode, label:&EdgeLabel) {
+    fn remove_source(&mut self, node: *mut AliasGraphNode, label: &EdgeLabel) {
         unsafe {
             if let Some(set) = (*self.predecessors).get_mut(&label) {
                 (**set).remove(&node);
@@ -238,19 +251,19 @@ impl Drop for AliasGraphNode {
         //     if !self.out_labels.is_null() {
         //         let out_labels_set = Box::from_raw(self.out_labels);
         //         for &label_ptr in out_labels_set.iter() {
-        //             drop(Box::from_raw(label_ptr)); 
+        //             drop(Box::from_raw(label_ptr));
         //         }
         //     }
-            
+
         //     if !self.in_labels.is_null() {
         //         let in_labels_set = Box::from_raw(self.in_labels);
         //         for &label_ptr in in_labels_set.iter() {
-        //             drop(Box::from_raw(label_ptr)); 
+        //             drop(Box::from_raw(label_ptr));
         //         }
         //     }
-            
+
         //     drop(Box::from_raw(self.out_labels));
-        //     drop(Box::from_raw(self.in_labels)); 
+        //     drop(Box::from_raw(self.in_labels));
         // }
     }
 }
@@ -264,7 +277,7 @@ impl AliasGraphNode {
             // print alias set
             println!("  alias set:");
             let alias_set = &*self.alias_set;
-            for node in alias_set.iter(){
+            for node in alias_set.iter() {
                 println!("      {:?}", **node);
             }
 
@@ -297,32 +310,31 @@ impl AliasGraphNode {
     }
 }
 
-
 /// 1. a local's node index is its local index in mir
 /// 2. a temp's node index is started from the number of locals
 /// i.e., if there's 10 locals in a function, then:
-/// assign _0 = _1.field_0.field1 ==> 
+/// assign _0 = _1.field_0.field1 ==>
 /// _1 --field--> _10 --field--> _11, than make_alias(_0, _11)
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Copy)]
-pub struct GraphNodeId{
+pub struct GraphNodeId {
     pub def_id: DefId,
     pub index: usize,
 }
 
-impl GraphNodeId{
-    pub fn new(def_id: DefId, index: Option<usize>) -> Self{
-        GraphNodeId{
+impl GraphNodeId {
+    pub fn new(def_id: DefId, index: Option<usize>) -> Self {
+        GraphNodeId {
             def_id,
-            index: match index{
+            index: match index {
                 Some(i) => i,
                 None => next_local_id(),
-            }
+            },
         }
     }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
-pub enum EdgeLabel{
+pub enum EdgeLabel {
     Deref,
     Guard,
     // todo: field, array access
@@ -338,8 +350,8 @@ impl From<&str> for EdgeLabel {
         }
     }
 }
-impl EdgeLabel{
-    pub fn new_field(field_idx: usize) -> Self{
+impl EdgeLabel {
+    pub fn new_field(field_idx: usize) -> Self {
         EdgeLabel::Field(field_idx)
     }
 }

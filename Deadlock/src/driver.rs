@@ -1,22 +1,30 @@
+use clap::Parser;
+use rustc_compat::{CrateFilter, Plugin, RustcPluginArgs, Utf8Path};
+use rustc_driver::Compilation;
 use rustc_errors::registry;
 use rustc_hash::FxHashMap;
 
+use rustc_middle::ty::TyCtxt;
 use rustc_session::config;
-use std::{path::PathBuf, process, str, sync::Arc};
+use std::{
+    borrow::Cow,
+    env,
+    path::PathBuf,
+    process::{self, Command},
+    str,
+    sync::Arc,
+};
 use structopt::StructOpt;
 
 use crate::{
-    analysis::{
-        alias::AliasAnalysis, 
-        callgraph::CallGraph, 
-        LockSetAnalysis
-    }, 
-    context::Context, 
-    option::Options, 
-    utils::{self, mir::{Display, ShowMir}}
+    analysis::{alias::AliasAnalysis, callgraph::CallGraph, LockSetAnalysis},
+    context::Context,
+    option::Options,
+    utils::{
+        self,
+        mir::{Display, ShowMir},
+    },
 };
-
-
 
 /// 分析策略，每种策略是pass的数组，按顺序执行
 struct Strategy {
@@ -50,7 +58,7 @@ pub(crate) trait AnalysisPass: Send {
 
     /// 准备工作
     fn before_run(&mut self) {
-        info!("Analysis Pass {} is running.", self.name());
+        tracing::info!("Analysis Pass {} is running.", self.name());
     }
 
     /// 默认什么都不做
@@ -60,9 +68,6 @@ pub(crate) trait AnalysisPass: Send {
     fn after_run(&mut self) {}
 }
 
-/// 驱动器，里面有
-/// 1. 分析/编译选项
-/// 2. 分析策略
 pub(crate) struct MyCallBacks {
     options: Options,
     strategy: FxHashMap<String, Strategy>,
@@ -77,26 +82,18 @@ impl MyCallBacks {
     }
 
     /// print
-    fn print_basic(&mut self, context: &mut Context) {
-        let tcx = context.tcx;
-        let mut show_mir = ShowMir::new(tcx);
-        let mut call_graph = CallGraph::new(tcx);
+    fn print_basic<'tcx>(&mut self, tcx: &TyCtxt<'tcx>) {
+        let mut show_mir = ShowMir::new(*tcx);
+        let mut call_graph = CallGraph::new(*tcx);
         show_mir.start();
         call_graph.start();
-        let mut alias_analysis = AliasAnalysis::new(tcx, call_graph);
+        let mut alias_analysis = AliasAnalysis::new(*tcx, call_graph);
         alias_analysis.run_analysis();
-        let (tcx, call_graph, alias_graph, control_flow_graph) = alias_analysis.consume_alias_results();
-        let mut lock_set_analysis = LockSetAnalysis::new(tcx, call_graph, alias_graph, control_flow_graph);
+        let (tcx, call_graph, alias_graph, control_flow_graph) =
+            alias_analysis.consume_alias_results();
+        let mut lock_set_analysis =
+            LockSetAnalysis::new(tcx, call_graph, alias_graph, control_flow_graph);
         lock_set_analysis.run_analysis();
-        // for (did, name) in &context.all_funcs {
-        //     let mir = tcx.optimized_mir(did.as_local().unwrap()).clone();
-        //     if self.options.show_all_funcs {
-        //         println!("Discover Function: {} {}", did.display(), name);
-        //     }
-        //     if self.options.show_all_mir {
-        //         println!("mir:{:#?}", mir.basic_blocks);
-        //     }
-        // }
     }
 
     /// 注册策略
@@ -114,8 +111,6 @@ impl MyCallBacks {
         // TODO
     }
 
-    /// 执行策略
-    /// 根据名字来逐个执行pass
     fn run_strategy(&mut self, name: &str, context: &mut Context<'_>) {
         match self.strategy.get_mut(name) {
             Some(stra) => {
@@ -135,74 +130,64 @@ impl MyCallBacks {
         //println!("!!!!!!!!!!!!!!!! {}", stra.name.clone());
         self.strategy.insert(stra.name.clone(), stra);
     }
+}
 
-    /// 最关键的驱动函数，运行rustc编译成MIR，我们通过query来访问
-    /// 这个函数主要做了以下几个事情：
-    /// 1. 创建分析上下文
-    /// 2. 进行分析
-    /// 3. ...
-    pub(crate) fn run_driver(&mut self) {
-        let config = self.get_rustc_config();
-        rustc_interface::run_compiler(config, |compiler| {
-            compiler.enter(|queries| {
-                //let mut driver = driver_mutex.lock().unwrap();
+impl rustc_driver::Callbacks for MyCallBacks {
+    fn after_analysis<'tcx>(
+        &mut self,
+        _compiler: &rustc_interface::interface::Compiler,
+        _queries: &'tcx rustc_interface::Queries<'tcx>,
+    ) -> rustc_driver::Compilation {
+        _queries.global_ctxt().unwrap().enter(|tcx| {
+            self.print_basic(&tcx);
 
-                queries.global_ctxt().unwrap().enter(|tcx| {
-                    let mut context = Box::new(Context::new(&self.options, tcx));
-                    // 初始化分析需要的上下文
-                    context.tcx = tcx;
-                    // 根据编译选项打印一些东西
-                    self.print_basic(&mut context);
+            self.register_strategy();
 
-                    // 注册各种策略
-                    self.register_strategy();
-
-                    // 运行策略
-                    // TODO: 重构为通过命令行选项来调用策略
-                    // self.run_strategy("mir-print", &mut context);
-
-                    // FIXME: 添加我们的逻辑，其余的Step，我理解是重构成一个个pass，然后每个pass，把结果存入pass里面
-                    // ##############################
-                });
-            });
+            // TODO
         });
-    }
-
-    /// 获取驱动rustc的configuration
-    /// FIXME 如何编译一个crate
-    pub(crate) fn get_rustc_config(&self) -> rustc_interface::Config {
-        let out = process::Command::new("rustc")
-            .arg("--print=sysroot")
-            .current_dir(".")
-            .output()
-            .unwrap();
-        let sysroot = str::from_utf8(&out.stdout).unwrap().trim();
-        rustc_interface::Config {
-            opts: config::Options {
-                maybe_sysroot: Some(PathBuf::from(sysroot)),
-                ..config::Options::default()
-            },
-            input: config::Input::File(self.options.input_dir.clone().unwrap().to_path_buf()),
-            crate_cfg: Vec::new(),
-            crate_check_cfg: Vec::new(),
-            output_dir: None,
-            output_file: None,
-            file_loader: None,
-            locale_resources: rustc_driver::DEFAULT_LOCALE_RESOURCES,
-            lint_caps: rustc_hash::FxHashMap::default(),
-            parse_sess_created: None,
-            register_lints: None,
-            override_queries: None,
-            make_codegen_backend: None,
-            registry: registry::Registry::new(&rustc_error_codes::DIAGNOSTICS),
-            expanded_args: Vec::new(),
-            ice_file: None,
-            hash_untracked_state: None,
-            using_internal_features: Arc::default(),
-        }
+        Compilation::Continue
     }
 }
 
-impl rustc_driver::Callbacks for MyCallBacks{
-    
+#[derive(Default)]
+pub struct MyDriver;
+
+impl Plugin for MyDriver {
+    type Args = Options;
+
+    fn version(&self) -> Cow<'static, str> {
+        env!("CARGO_PKG_VERSION").into()
+    }
+
+    fn driver_name(&self) -> Cow<'static, str> {
+        "deadlock".into()
+    }
+
+    // In the CLI, we ask Clap to parse arguments and also specify a CrateFilter.
+    // If one of the CLI arguments was a specific file to analyze, then you
+    // could provide a different filter.
+    fn args(&self, _target_dir: &Utf8Path) -> RustcPluginArgs<Self::Args> {
+        let args = Options::parse_from(env::args().skip(1));
+        println!("{:?}", args);
+        let filter = CrateFilter::AllCrates;
+        RustcPluginArgs { args, filter }
+    }
+
+    // Pass Cargo arguments (like --feature) from the top-level CLI to Cargo.
+    fn modify_cargo(&self, cargo: &mut Command, args: &Self::Args) {
+        cargo.args(&args.cargo_args);
+    }
+
+    // In the driver, we use the Rustc API to start a compiler session
+    // for the arguments given to us by rustc_plugin.
+    fn run(
+        self,
+        compiler_args: Vec<String>,
+        plugin_args: Self::Args,
+    ) -> rustc_interface::interface::Result<()> {
+        tracing::debug!("Rust Probe start to run.");
+        let mut callbacks = MyCallBacks::new(&plugin_args);
+        let compiler = rustc_driver::RunCompiler::new(&compiler_args, &mut callbacks);
+        compiler.run()
+    }
 }

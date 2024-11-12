@@ -135,12 +135,17 @@ pub fn rustc_main<T: Plugin>(plugin: T) {
             _ => true,
         };
         let run_plugin = !normal_rustc && (run_on_all_crates || primary_package) && is_target_crate;
-
+        println!(
+            "{:?}, {:?}, {:?}, {:?}",
+            normal_rustc, run_on_all_crates, primary_package, is_target_crate
+        );
         if run_plugin {
+            println!("right");
             let plugin_args: T::Args =
                 serde_json::from_str(&env::var(PLUGIN_ARGS).unwrap()).unwrap();
             plugin.run(args, plugin_args)
         } else {
+            println!("false");
             rustc_driver::RunCompiler::new(&args, &mut DefaultCallbacks).run()
         }
     }))
