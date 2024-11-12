@@ -57,15 +57,10 @@ fn get_sysroot(orig_args: &[String]) -> (bool, String) {
     let have_sys_root_arg = sys_root_arg.is_some();
     let sys_root = sys_root_arg
         .map(PathBuf::from)
-        .or_else(|| std::env::var("MIRI_SYSROOT").ok().map(PathBuf::from))
         .or_else(|| std::env::var("SYSROOT").ok().map(PathBuf::from))
         .or_else(|| {
-            let home = std::env::var("RUSTUP_HOME")
-                .or_else(|_| std::env::var("MULTIRUST_HOME"))
-                .ok();
-            let toolchain = std::env::var("RUSTUP_TOOLCHAIN")
-                .or_else(|_| std::env::var("MULTIRUST_TOOLCHAIN"))
-                .ok();
+            let home = std::env::var("RUSTUP_HOME").ok();
+            let toolchain = std::env::var("RUSTUP_TOOLCHAIN").ok();
             toolchain_path(home, toolchain)
         })
         .or_else(|| {
@@ -79,12 +74,8 @@ fn get_sysroot(orig_args: &[String]) -> (bool, String) {
         })
         .or_else(|| option_env!("SYSROOT").map(PathBuf::from))
         .or_else(|| {
-            let home = option_env!("RUSTUP_HOME")
-                .or(option_env!("MULTIRUST_HOME"))
-                .map(ToString::to_string);
-            let toolchain = option_env!("RUSTUP_TOOLCHAIN")
-                .or(option_env!("MULTIRUST_TOOLCHAIN"))
-                .map(ToString::to_string);
+            let home = option_env!("RUSTUP_HOME").map(ToString::to_string);
+            let toolchain = option_env!("RUSTUP_TOOLCHAIN").map(ToString::to_string);
             toolchain_path(home, toolchain)
         })
         .map(|pb| pb.to_string_lossy().to_string())
@@ -108,7 +99,6 @@ pub fn rustc_main<T: Plugin>(plugin: T) {
 
         let (have_sys_root_arg, sys_root) = get_sysroot(&orig_args);
 
-        println!("origin args: {:?}", &orig_args);
         if orig_args.iter().any(|a| a == "--version" || a == "-V") {
             let version_info = rustc_tools_util::get_version_info!();
             println!("{version_info}");
@@ -145,17 +135,11 @@ pub fn rustc_main<T: Plugin>(plugin: T) {
             _ => true,
         };
         let run_plugin = !normal_rustc && (run_on_all_crates || primary_package) && is_target_crate;
-        println!(
-            "{:?}, {:?}, {:?}, {:?}",
-            normal_rustc, run_on_all_crates, primary_package, is_target_crate
-        );
         if run_plugin {
-            println!("right");
             let plugin_args: T::Args =
                 serde_json::from_str(&env::var(PLUGIN_ARGS).unwrap()).unwrap();
             plugin.run(args, plugin_args)
         } else {
-            println!("false");
             rustc_driver::RunCompiler::new(&args, &mut DefaultCallbacks).run()
         }
     }))
