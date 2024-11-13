@@ -9,23 +9,15 @@ use rustc_span::Symbol;
 
 use crate::{
     // model::{StmtTable, VarTable},
+    analysis::callgraph::CallGraph,
     option::Options,
 };
 
 /// 分析需要的上下文
 #[derive(Clone)]
 pub struct Context<'tcx> {
-    /// 分析选项，贯穿始终
-    pub options: Options,
-    /// Rust编译器的核心结构！！！
     pub tcx: TyCtxt<'tcx>,
-    /// 分析的入口函数
-    pub entry_func: DefId,
-    /// 存储所有的函数，主要是为了选项 show....
-    pub all_funcs: FxHashMap<DefId, Symbol>,
-    // FIXME: 添加更多成员为分析服务
-    //pub(crate) stmts: StmtTable<'tcx>,
-    //pub(crate) variables: VarTable<'tcx>,
+    pub call_graph: CallGraph<'tcx>,
 }
 
 impl<'tcx> Context<'tcx> {
@@ -48,7 +40,7 @@ impl<'tcx> Context<'tcx> {
                 }
                 _ => {}
             }
-	    }
+        }
 
         let entry_func = match entry_func {
             Some(did) => did,

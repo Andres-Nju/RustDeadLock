@@ -84,8 +84,6 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     fn before_run(&mut self) {}
 
     fn after_run(&self) {
-        self.alias_graph.print_graph();
-        self.print_lock_set_facts();
         println!("lock graph:\n{:?}", self.lock_graph);
         self.lock_graph.print_loops();
     }
@@ -144,7 +142,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         self.init_func(&def_id, body);
         // FIXME: redundant clone
         for current_bb_index in self.control_flow_graph[&def_id].clone() {
-            println!("bb {:?} now under lock analysis ", current_bb_index);
+            // println!("bb {:?} now under lock analysis ", current_bb_index);
             self.visit_bb(def_id, current_bb_index.as_usize(), body);
         }
     }

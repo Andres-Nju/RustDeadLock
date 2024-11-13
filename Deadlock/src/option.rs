@@ -7,24 +7,9 @@ use clap::Parser;
 #[derive(Parser, Clone, Debug, Serialize, Deserialize)]
 #[structopt(about = "This is a bug detector for Rust.")]
 pub struct Options {
-    // /// 指定源码对应的文件
-    // #[arg(long = "directory")]
-    // pub input_dir: Option<PathBuf>,
-    /// 展示所有函数的名字
-    #[arg(long = "show-all-funcs")]
-    pub show_all_funcs: bool,
-
-    /// 展示所有函数的MIR
-    #[arg(long = "show-all-mir")]
-    pub show_all_mir: bool,
-
-    /// 打印mir
+    /// emit mir
     #[arg(long = "emit-mir")]
     pub emit_mir: bool,
-
-    // /// 默认是从main开始分析
-    // #[arg(long = "entry-fun", default_value = "main")]
-    // pub entry_func: String,
 
     // FIXME: 在下面添加更多的编译选项
     #[structopt(last = true)]

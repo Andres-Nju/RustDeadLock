@@ -26,17 +26,13 @@ use crate::{
     },
 };
 
-/// 分析策略，每种策略是pass的数组，按顺序执行
+/// a strategy consists of all necessary passes
 struct Strategy {
-    /// 策略的名字
     name: String,
-
-    /// 趟
     passes: Vec<Box<dyn AnalysisPass>>,
 }
 
 impl<'tcx> Strategy {
-    /// 创建新的策略
     fn new(name: &str) -> Self {
         Self {
             name: String::from(name),
@@ -44,27 +40,21 @@ impl<'tcx> Strategy {
         }
     }
 
-    /// 在策略里面注册pass
+    /// register pass in a strategy
     fn register_pass(&mut self, pass: Box<dyn AnalysisPass>) {
         self.passes.push(pass);
     }
 }
 
-/// 分析的pass
-/// e.g. 建模pass -> 预分析pass -> 分析pass
-///
 pub(crate) trait AnalysisPass: Send {
     fn name(&self) -> String;
 
-    /// 准备工作
     fn before_run(&mut self) {
-        tracing::info!("Analysis Pass {} is running.", self.name());
+        tracing::info!("{} analysis is running.", self.name());
     }
 
-    /// 默认什么都不做
-    fn go_pass(&mut self, context: &mut Context) {}
+    fn run_pass(&mut self) {}
 
-    /// 收尾工作
     fn after_run(&mut self) {}
 }
 
@@ -84,8 +74,8 @@ impl MyCallBacks {
     /// print
     fn print_basic<'tcx>(&mut self, tcx: &TyCtxt<'tcx>) {
         let mut show_mir = ShowMir::new(*tcx);
-        let mut call_graph = CallGraph::new(*tcx);
         show_mir.start();
+        let mut call_graph = CallGraph::new(*tcx);
         call_graph.start();
         let mut alias_analysis = AliasAnalysis::new(*tcx, call_graph);
         alias_analysis.run_analysis();
@@ -96,15 +86,12 @@ impl MyCallBacks {
         lock_set_analysis.run_analysis();
     }
 
-    /// 注册策略
-    /// 根据编译选项来运行（TODO）
+    /// register strategies
     fn register_strategy(&mut self) {
-        // example:
-        // 添加第一个策略，安德森
-        // let mut stra1 = Strategy::new("Anderson");
-        // stra1.register_pass(Box::new(ModelPass::default()));
-        // stra1.register_pass(Box::new(AndersonPass::default()));
-        // self.add_strategy(stra1);
+        let mut strategy = Strategy::new("Deadlock");
+        // strategy.register_pass(Box::new(ModelPass::default()));
+        // strategy.register_pass(Box::new(AndersonPass::default()));
+        self.add_strategy(strategy);
 
         // -----------------
         // 添加更多策略
@@ -116,7 +103,7 @@ impl MyCallBacks {
             Some(stra) => {
                 for pass in &mut stra.passes {
                     pass.before_run();
-                    pass.go_pass(context);
+                    // pass.run_pass(context);
                     pass.after_run();
                 }
             }
@@ -127,7 +114,6 @@ impl MyCallBacks {
     }
 
     fn add_strategy(&mut self, stra: Strategy) {
-        //println!("!!!!!!!!!!!!!!!! {}", stra.name.clone());
         self.strategy.insert(stra.name.clone(), stra);
     }
 }
