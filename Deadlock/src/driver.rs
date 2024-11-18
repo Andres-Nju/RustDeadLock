@@ -18,7 +18,7 @@ use structopt::StructOpt;
 
 use crate::{
     analysis::{alias::AliasAnalysis, callgraph::CallGraph, LockSetAnalysis},
-    context::Context,
+    context::MyTcx,
     option::Options,
     utils::{
         self,
@@ -98,7 +98,7 @@ impl MyCallBacks {
         // TODO
     }
 
-    fn run_strategy(&mut self, name: &str, context: &mut Context<'_>) {
+    fn run_strategy(&mut self, name: &str, context: &mut MyTcx<'_>) {
         match self.strategy.get_mut(name) {
             Some(stra) => {
                 for pass in &mut stra.passes {
