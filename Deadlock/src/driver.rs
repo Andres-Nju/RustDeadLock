@@ -17,7 +17,11 @@ use std::{
 use structopt::StructOpt;
 
 use crate::{
-    analysis::{alias::AliasAnalysis, callgraph::CallGraph, LockSetAnalysis},
+    analysis::{
+        alias::AliasAnalysis,
+        callgraph::{CallGraph, CallGraphPass},
+        LockSetAnalysis,
+    },
     context::MyTcx,
     option::Options,
     utils::{
@@ -73,32 +77,34 @@ impl MyCallBacks {
 
     /// print
     fn print_basic<'tcx>(&mut self, tcx: &TyCtxt<'tcx>) {
-        let mut show_mir = ShowMir::new(*tcx);
-        show_mir.start();
-        let mut call_graph = CallGraph::new(*tcx);
-        call_graph.start();
-        let mut alias_analysis = AliasAnalysis::new(*tcx, call_graph);
-        alias_analysis.run_analysis();
-        let (tcx, call_graph, alias_graph, control_flow_graph) =
-            alias_analysis.consume_alias_results();
-        let mut lock_set_analysis =
-            LockSetAnalysis::new(tcx, call_graph, alias_graph, control_flow_graph);
-        lock_set_analysis.run_analysis();
+        // let mut show_mir = ShowMir::new(*tcx);
+        // show_mir.start();
+        // let mut call_graph = CallGraph::new(*tcx);
+        // call_graph.start();
+        // let mut alias_analysis = AliasAnalysis::new(*tcx, call_graph);
+        // alias_analysis.run_analysis();
+        // let (tcx, call_graph, alias_graph, control_flow_graph) =
+        //     alias_analysis.consume_alias_results();
+        // let mut lock_set_analysis =
+        //     LockSetAnalysis::new(tcx, call_graph, alias_graph, control_flow_graph);
+        // lock_set_analysis.run_analysis();
     }
 
     /// register strategies
-    fn register_strategy(&mut self) {
-        let mut strategy = Strategy::new("Deadlock");
-        // strategy.register_pass(Box::new(ModelPass::default()));
-        // strategy.register_pass(Box::new(AndersonPass::default()));
+    fn register_strategy(&mut self, my_tcx: MyTcx) {
+        let tcx_boxed = Box::new(my_tcx);
+        let my_tcx = Box::leak(tcx_boxed);
+        let mut strategy = Strategy::new("Call Graph Construction");
+        let pass1 = CallGraphPass::new(my_tcx);
+        // strategy.register_pass(Box::new(pass1));
         self.add_strategy(strategy);
 
         // -----------------
-        // 添加更多策略
-        // TODO
+        // TODO: more strategy
+        // FIXME: 如何重用tcx？这里用strategy封装的话，内置数据结构不能用&my_tcx
     }
 
-    fn run_strategy(&mut self, name: &str, context: &mut MyTcx<'_>) {
+    fn run_strategy(&mut self, name: &str) {
         match self.strategy.get_mut(name) {
             Some(stra) => {
                 for pass in &mut stra.passes {
@@ -125,11 +131,43 @@ impl rustc_driver::Callbacks for MyCallBacks {
         _queries: &'tcx rustc_interface::Queries<'tcx>,
     ) -> rustc_driver::Compilation {
         _queries.global_ctxt().unwrap().enter(|tcx| {
-            self.print_basic(&tcx);
+            if self.options.emit_mir {
+                let mut show_mir = ShowMir::new(tcx);
+                show_mir.start();
+            }
 
-            self.register_strategy();
+            let my_tcx = MyTcx::new(tcx);
 
+            // self.register_strategy(my_tcx);
             // TODO
+            // self.run_strategy();
+
+            let tcx_boxed = Box::new(my_tcx);
+            let my_tcx = Box::leak(tcx_boxed);
+            // call graph pre build pass
+            let mut call_graph_pre_build_pass = CallGraphPass::new(my_tcx);
+            call_graph_pre_build_pass.start();
+
+            if self.options.emit_call_graph {
+                call_graph_pre_build_pass.print_topo();
+            }
+
+            // alias analysis pass
+            let mut alias_anaysis_pass = AliasAnalysis::new(my_tcx);
+            alias_anaysis_pass.run_analysis();
+
+            if self.options.emit_alias_graph {
+                my_tcx.alias_graph.print_graph();
+            }
+
+            // lock set analysis pass
+            let mut lock_analysis_pass = LockSetAnalysis::new(my_tcx);
+            lock_analysis_pass.run_analysis();
+
+            if self.options.emit_lock_graph {
+                lock_analysis_pass.print_lock_set_facts();
+                lock_analysis_pass.lock_graph.print_loops();
+            }
         });
         Compilation::Continue
     }

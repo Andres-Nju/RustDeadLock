@@ -8,7 +8,10 @@ fi
 
 input_dir=$1
 
+shift
+additional_args="$@"
+
 cargo install --path .
 cd "../test/$input_dir" || { echo "Directory ../test/$input_dir not found."; exit 1; }
-call-deadlock
+call-deadlock $additional_args
 cd ../../Deadlock || { echo "Directory ../../Deadlock not found."; exit 1; }

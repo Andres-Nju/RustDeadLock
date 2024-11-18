@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use clap::Parser;
 
-/// 总程序，里面很多子命令，通过如“rustc_tester init ...”调用
 #[derive(Parser, Clone, Debug, Serialize, Deserialize)]
 #[structopt(about = "This is a bug detector for Rust.")]
 pub struct Options {
@@ -11,7 +10,16 @@ pub struct Options {
     #[arg(long = "emit-mir")]
     pub emit_mir: bool,
 
-    // FIXME: 在下面添加更多的编译选项
+    #[arg(long = "emit-call-graph")]
+    pub emit_call_graph: bool,
+
+    #[arg(long = "emit-alias-graph")]
+    pub emit_alias_graph: bool,
+
+    #[arg(long = "emit-lock-graph")]
+    pub emit_lock_graph: bool,
+
+    // FIXME: more compilation options
     #[structopt(last = true)]
     pub cargo_args: Vec<String>,
 }

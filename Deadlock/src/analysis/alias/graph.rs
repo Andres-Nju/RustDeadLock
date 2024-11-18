@@ -8,15 +8,15 @@ use crate::analysis::alias::node::EdgeLabel;
 
 use super::node::{self, AliasGraphNode, GraphNodeId};
 
-
-pub struct AliasGraph{
+#[derive(Clone)]
+pub struct AliasGraph {
     // might be problematic, as Rust hashes the raw pointer literally, not according to its data
     nodes: FxHashSet<*mut AliasGraphNode>,
     node_map: FxHashMap<GraphNodeId, *mut AliasGraphNode>,
 }
 
-impl Drop for AliasGraph{
-    fn drop(&mut self) {  
+impl Drop for AliasGraph {
+    fn drop(&mut self) {
         // for &node_ptr in self.nodes.iter() {
         //     unsafe {
         //         drop(Box::from_raw(node_ptr));
@@ -25,7 +25,7 @@ impl Drop for AliasGraph{
     }
 }
 
-impl AliasGraph{
+impl AliasGraph {
     pub fn new() -> Self {
         AliasGraph {
             nodes: FxHashSet::default(),
@@ -34,9 +34,7 @@ impl AliasGraph{
     }
 
     pub fn find_vertex(&self, val: *mut AliasGraphNode) -> Option<*mut AliasGraphNode> {
-        unsafe {
-            self.node_map.get(&(*val).id).copied()
-        }
+        unsafe { self.node_map.get(&(*val).id).copied() }
     }
 
     pub fn add_node(&mut self, id: GraphNodeId) -> *mut AliasGraphNode {
@@ -47,12 +45,10 @@ impl AliasGraph{
     }
 
     pub fn get_or_insert_node(&mut self, id: GraphNodeId) -> *mut AliasGraphNode {
-        unsafe{
+        unsafe {
             let node_ptr = AliasGraphNode::new(id);
-            match self.node_map.get(&(*node_ptr).id){
-                Some(ptr) => {
-                    *ptr
-                }
+            match self.node_map.get(&(*node_ptr).id) {
+                Some(ptr) => *ptr,
                 None => {
                     self.nodes.insert(node_ptr);
                     self.node_map.insert((*node_ptr).id, node_ptr);
@@ -63,7 +59,11 @@ impl AliasGraph{
     }
 
     // Combine two nodes into one, merging NodeY into NodeX
-    pub fn combine(&mut self, mut node_x: *mut AliasGraphNode, mut node_y: *mut AliasGraphNode) -> *mut AliasGraphNode {
+    pub fn combine(
+        &mut self,
+        mut node_x: *mut AliasGraphNode,
+        mut node_y: *mut AliasGraphNode,
+    ) -> *mut AliasGraphNode {
         unsafe {
             assert!(self.nodes.contains(&node_x));
             assert!(self.nodes.contains(&node_y));
@@ -78,7 +78,7 @@ impl AliasGraph{
             }
 
             // Merge NodeY's outgoing labels and targets into NodeX
-            for label in  (*node_y).out_labels.iter() {
+            for label in (*node_y).out_labels.iter() {
                 if (*node_y).contains_target(node_y, label) {
                     if !(*node_x).contains_target(node_x, label) {
                         (*node_x).add_target(node_x, label.clone());
@@ -131,13 +131,12 @@ impl AliasGraph{
         }
     }
 
-
-    pub fn qirun_algorithm(&mut self){
+    pub fn qirun_algorithm(&mut self) {
         let mut work_list = VecDeque::new();
         unsafe {
-            for node in self.nodes.iter(){
-                for label in (**node).out_labels.iter(){
-                    if (**node).out_num_vertices(label) > 1{
+            for node in self.nodes.iter() {
+                for label in (**node).out_labels.iter() {
+                    if (**node).out_num_vertices(label) > 1 {
                         work_list.push_back((*node, label.clone()));
                     }
                 }
@@ -145,28 +144,28 @@ impl AliasGraph{
 
             while let Some((z_node, label)) = work_list.pop_front() {
                 let nodes = (*z_node).get_out_vertices(&label).unwrap();
-                if (*nodes).len() <= 1{
+                if (*nodes).len() <= 1 {
                     continue;
                 }
 
                 let mut nodes_iter = (*nodes).iter();
 
                 let mut x = *nodes_iter.next().unwrap();
-                while let Some(y) = nodes_iter.next(){
+                while let Some(y) = nodes_iter.next() {
                     let mut y = *y;
                     if (*x).degree() < (*y).degree() {
                         std::mem::swap(&mut x, &mut y);
                     }
-    
+
                     assert_ne!(x, y);
                     self.nodes.remove(&y);
-    
+
                     let y_equiv_set = (*y).get_alias_set();
                     for &val in (*y_equiv_set).iter() {
                         self.node_map.insert((*val).id, x);
                     }
                     (*y).mv_alias_set_to(x);
-    
+
                     // Process Y's outgoing edges
                     for &out_label in (*y).out_labels.iter() {
                         if (*y).contains_target(y, &out_label) {
@@ -179,14 +178,14 @@ impl AliasGraph{
                             (*y).remove_target(y, &out_label);
                         }
                     }
-    
+
                     // Transfer remaining targets
                     for label in (*y).out_labels.iter() {
                         if let Some(out_vertices) = (*y).get_out_vertices(label) {
                             for &w in (*out_vertices).iter() {
                                 if !(*x).contains_target(w, label) {
                                     (*x).add_target(w, *label);
-                                    if (*x).out_num_vertices(label) > 1{
+                                    if (*x).out_num_vertices(label) > 1 {
                                         work_list.push_back((x, *label));
                                     }
                                 }
@@ -197,7 +196,7 @@ impl AliasGraph{
                             }
                         }
                     }
-    
+
                     // Process Y's incoming edges
                     for label in (*y).in_labels.iter() {
                         if let Some(in_vertices) = (*y).get_in_vertices(label) {
@@ -218,58 +217,57 @@ impl AliasGraph{
     }
 
     pub fn resolve_project(&mut self, def_id: &DefId, p: &Place) -> *mut AliasGraphNode {
-        unsafe{
+        unsafe {
             let cur_node_id = GraphNodeId::new(def_id.clone(), Some(p.local.as_usize()));
             let mut cur_node = self.get_or_insert_node(cur_node_id);
             // let mut current_node_set = Box::into_raw(Box::new(FxHashSet::default()));
             // (*current_node_set).insert(cur_node);
-            for projection in p.projection{
-                
-                match &projection{ // TODO: complex types
-                    mir::ProjectionElem::Deref => { // (*p).* ... get q of all p --deref--> q; if there's no such q, create one
+            for projection in p.projection {
+                match &projection {
+                    // TODO: complex types
+                    mir::ProjectionElem::Deref => {
+                        // (*p).* ... get q of all p --deref--> q; if there's no such q, create one
                         let deref_label = EdgeLabel::Deref;
-                        if let Some(targets) = (*cur_node).get_out_vertices(&deref_label){
+                        if let Some(targets) = (*cur_node).get_out_vertices(&deref_label) {
                             // if the set is empty
-                            if (*targets).is_empty(){
-                                let target_node = self.add_node(GraphNodeId::new(def_id.clone(), None));
+                            if (*targets).is_empty() {
+                                let target_node =
+                                    self.add_node(GraphNodeId::new(def_id.clone(), None));
                                 (*cur_node).add_target(target_node, deref_label);
                                 // (*current_node_set).insert(target_node);
                                 cur_node = target_node;
-                            }
-                            else {
+                            } else {
                                 cur_node = *(*targets).iter().next().unwrap();
                             }
-                        }
-                        else { 
+                        } else {
                             let target_id = GraphNodeId::new(def_id.clone(), None);
                             let target_node = self.add_node(target_id);
                             (*cur_node).add_target(target_node, deref_label);
                             // (*current_node_set).insert(target_node);
                             cur_node = target_node;
                         }
-                    },
+                    }
                     mir::ProjectionElem::Field(field_idx, _) => {
                         let field_label = EdgeLabel::new_field(field_idx.as_usize());
-                        if let Some(targets) = (*cur_node).get_out_vertices(&field_label){
+                        if let Some(targets) = (*cur_node).get_out_vertices(&field_label) {
                             // if the set is empty
-                            if (*targets).is_empty(){
-                                let target_node = self.add_node(GraphNodeId::new(def_id.clone(), None));
+                            if (*targets).is_empty() {
+                                let target_node =
+                                    self.add_node(GraphNodeId::new(def_id.clone(), None));
                                 (*cur_node).add_target(target_node, field_label);
                                 // (*current_node_set).insert(target_node);
                                 cur_node = target_node;
-                            }
-                            else {
+                            } else {
                                 cur_node = *(*targets).iter().next().unwrap();
                             }
-                        }
-                        else { 
+                        } else {
                             let target_id = GraphNodeId::new(def_id.clone(), None);
                             let target_node = self.add_node(target_id);
                             (*cur_node).add_target(target_node, field_label);
                             // (*current_node_set).insert(target_node);
                             cur_node = target_node;
                         }
-                    },
+                    }
                     mir::ProjectionElem::Index(_) => todo!(),
                     mir::ProjectionElem::ConstantIndex { .. } => todo!(),
                     mir::ProjectionElem::Subslice { .. } => todo!(),
@@ -283,9 +281,9 @@ impl AliasGraph{
         }
     }
 
-    pub fn print(&self){
-        for &node_ptr in &self.nodes{
-            unsafe{
+    pub fn print(&self) {
+        for &node_ptr in &self.nodes {
+            unsafe {
                 (*node_ptr).print_node();
             }
             println!();
@@ -293,8 +291,8 @@ impl AliasGraph{
     }
     pub fn print_graph(&self) {
         println!("node map:");
-        for (key, val) in self.node_map.iter(){
-            unsafe{
+        for (key, val) in self.node_map.iter() {
+            unsafe {
                 println!("  {:?} --> {:?}", key, **val);
             }
         }
@@ -302,7 +300,7 @@ impl AliasGraph{
             unsafe {
                 let node = &*node_ptr;
                 println!("Node ID: {:?}", node.id);
-                    
+
                 // print alias_set
                 println!("  Alias Set:");
                 if !node.alias_set.is_null() {
@@ -317,7 +315,7 @@ impl AliasGraph{
                 println!("  Out Labels:");
                 if !node.out_labels.is_empty() {
                     for &label in node.out_labels.iter() {
-                        println!("    - {:?}", label); 
+                        println!("    - {:?}", label);
                     }
                 }
 
@@ -325,18 +323,18 @@ impl AliasGraph{
                 println!("  In Labels:");
                 if !node.in_labels.is_empty() {
                     for &label in node.in_labels.iter() {
-                        println!("    - {:?}", label); 
+                        println!("    - {:?}", label);
                     }
                 }
 
                 // print successors
                 println!("  Successors:");
                 if !node.successors.is_null() {
-                    let successors_map = &*node.successors; 
+                    let successors_map = &*node.successors;
                     for (label, successors_set) in successors_map.iter() {
                         println!("    - Label: {:?}", label);
                         for &successor in &**successors_set {
-                            let successor_node = &*successor; 
+                            let successor_node = &*successor;
                             println!("      - Node ID: {:?}", successor_node.id);
                         }
                     }
@@ -345,11 +343,11 @@ impl AliasGraph{
                 // print predecessors
                 println!("  Predecessors:");
                 if !node.predecessors.is_null() {
-                    let predecessors_map = &*node.predecessors; 
+                    let predecessors_map = &*node.predecessors;
                     for (label, predecessors_set) in predecessors_map.iter() {
                         println!("    - Label: {:?}", label);
                         for &predecessor in &**predecessors_set {
-                            let predecessor_node = &*predecessor; 
+                            let predecessor_node = &*predecessor;
                             println!("      - Node ID: {:?}", predecessor_node.id);
                         }
                     }
@@ -361,18 +359,18 @@ impl AliasGraph{
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use rustc_hir::def_id::DefIndex;
 
     use super::*;
     #[test]
-    fn test_add_remove_target(){
+    fn test_add_remove_target() {
         let mut graph = AliasGraph::new();
-    
+
         // add 2 nodes
         let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), None));
         let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), None));
-        
+
         unsafe {
             let label1 = EdgeLabel::Deref;
             (*node1).add_target(node2, label1);
@@ -397,9 +395,9 @@ mod tests{
     }
 
     #[test]
-    fn test_mv_alias_set(){
+    fn test_mv_alias_set() {
         let mut graph = AliasGraph::new();
-    
+
         // add 2 nodes
         let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), None));
         let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), None));
@@ -420,15 +418,15 @@ mod tests{
     }
 
     #[test]
-    fn test_combine(){
+    fn test_combine() {
         let mut graph = AliasGraph::new();
-    
+
         // add 2 nodes
         let node1 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(1)), None));
         let node2 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(2)), None));
         let node3 = graph.add_node(GraphNodeId::new(DefId::local(DefIndex::from_u32(3)), None));
-    
-        unsafe{
+
+        unsafe {
             let label1 = EdgeLabel::Deref;
             (*node1).add_target(node2, label1);
             let label2 = EdgeLabel::Guard;
@@ -439,7 +437,7 @@ mod tests{
         graph.combine(node3, node1);
         graph.print_graph();
 
-        unsafe{
+        unsafe {
             (*node3).remove_target(node2, &EdgeLabel::Deref);
         }
         println!("Remove node2 from node3's target\n");

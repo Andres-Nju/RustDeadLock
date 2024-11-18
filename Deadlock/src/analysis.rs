@@ -24,6 +24,8 @@ use rustc_middle::{
 use rustc_middle::mir::{Body, Location, Statement, Terminator};
 use tools::{is_guard, is_mutex_method, is_smart_pointer};
 
+use crate::context::MyTcx;
+
 pub mod alias;
 pub mod callgraph;
 pub mod fact;
@@ -31,19 +33,12 @@ pub mod lock;
 pub mod lockgraph;
 pub mod tools;
 mod visitor;
-pub struct LockSetAnalysis<'tcx> {
-    tcx: TyCtxt<'tcx>,
-    call_graph: CallGraph<'tcx>,
+pub struct LockSetAnalysis<'a, 'tcx> {
+    my_tcx: &'a mut MyTcx<'tcx>,
 
     // whole-program data
     // a DefId + BasicBlock's index pair determines a bb
     lock_set_facts: FxHashMap<DefId, FxHashMap<usize, LockSummary>>,
-
-    // alias_flow_graph: record the alias relationship for each function
-    alias_graph: AliasGraph,
-
-    // the traversing order of bbs in each function
-    control_flow_graph: FxHashMap<DefId, Vec<BasicBlock>>,
 
     // intra-analysis data
     // record all variable debug info in current function body
@@ -51,23 +46,15 @@ pub struct LockSetAnalysis<'tcx> {
     var_debug_info: FxHashMap<usize, String>,
 
     // lock graph
-    lock_graph: LockGraph,
+    pub lock_graph: LockGraph,
 }
 
-impl<'tcx> LockSetAnalysis<'tcx> {
-    pub fn new(
-        tcx: TyCtxt<'tcx>,
-        call_graph: CallGraph<'tcx>,
-        alias_graph: AliasGraph,
-        control_flow_graph: FxHashMap<DefId, Vec<BasicBlock>>,
-    ) -> Self {
+impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
+    pub fn new(my_tcx: &'a mut MyTcx<'tcx>) -> Self {
         Self {
-            tcx,
+            my_tcx,
             lock_set_facts: FxHashMap::default(),
-            alias_graph,
             var_debug_info: FxHashMap::default(),
-            call_graph,
-            control_flow_graph,
             lock_graph: LockGraph::new(),
         }
     }
@@ -81,11 +68,12 @@ impl<'tcx> LockSetAnalysis<'tcx> {
         self.after_run();
     }
 
-    fn before_run(&mut self) {}
+    fn before_run(&mut self) {
+        tracing::info!("Start alias analysis");
+    }
 
     fn after_run(&self) {
-        println!("lock graph:\n{:?}", self.lock_graph);
-        self.lock_graph.print_loops();
+        tracing::info!("Finish lock analysis");
     }
 
     pub fn print_lock_set_facts(&self) {
@@ -117,16 +105,16 @@ impl<'tcx> LockSetAnalysis<'tcx> {
 
     fn intra_procedural_analysis(&mut self) {
         // traverse the functions in a reversed topo order
-        for def_id in self.call_graph.topo.clone() {
-            if self.tcx.is_mir_available(def_id) {
+        for def_id in self.my_tcx.call_graph.topo.clone() {
+            if self.my_tcx.tcx.is_mir_available(def_id) {
                 // each function is analyzed only once
-                let body = self.tcx.optimized_mir(def_id);
+                let body = self.my_tcx.tcx.optimized_mir(def_id);
                 if def_id.is_local() && self.lock_set_facts.get(&def_id) == None {
-                    println!(
-                        "Now analyze function {:?}, {:?}",
-                        body.span,
-                        self.tcx.def_path_str(def_id)
-                    );
+                    // println!(
+                    //     "Now analyze function {:?}, {:?}",
+                    //     body.span,
+                    //     self.my_tcx.tcx.def_path_str(def_id)
+                    // );
                     // only analyze functions defined in current crate
                     // FIXME: closure?
                     self.lock_set_facts
@@ -141,14 +129,14 @@ impl<'tcx> LockSetAnalysis<'tcx> {
     fn visit_body(&mut self, def_id: DefId, body: &Body<'tcx>) {
         self.init_func(&def_id, body);
         // FIXME: redundant clone
-        for current_bb_index in self.control_flow_graph[&def_id].clone() {
+        for current_bb_index in self.my_tcx.control_flow_graph[&def_id].clone() {
             // println!("bb {:?} now under lock analysis ", current_bb_index);
             self.visit_bb(def_id, current_bb_index.as_usize(), body);
         }
     }
     fn init_func(&mut self, def_id: &DefId, body: &Body) {
         let lock_set_facts = self.lock_set_facts.get_mut(def_id).unwrap();
-        for bb_index in self.control_flow_graph.get(def_id).unwrap().clone() {
+        for bb_index in self.my_tcx.control_flow_graph.get(def_id).unwrap().clone() {
             lock_set_facts.entry(bb_index.as_usize()).or_insert(vec![]);
         }
     }
@@ -208,8 +196,8 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                         match constant.ty().kind() {
                             rustc_type_ir::TyKind::FnDef(fn_id, _) => {
                                 // _* = func(args) -> [return: bb*, unwind: bb*] @ Call: FnDid: *
-                                let def_path = self.tcx.def_path(fn_id.clone());
-                                let def_path_str = self.tcx.def_path_str(fn_id);
+                                let def_path = self.my_tcx.tcx.def_path(fn_id.clone());
+                                let def_path_str = self.my_tcx.tcx.def_path_str(fn_id);
                                 if let DefPathData::ValueNs(name) =
                                     &def_path.data[def_path.data.len() - 1].data
                                 {
@@ -221,6 +209,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                                                 mir::Operand::Constant(_) => todo!(),
                                                 mir::Operand::Copy(p) | mir::Operand::Move(p) => {
                                                     let guard = self
+                                                        .my_tcx
                                                         .alias_graph
                                                         .resolve_project(def_id, destination);
                                                     let mut new_lock_set_fact =
@@ -301,7 +290,7 @@ impl<'tcx> LockSetAnalysis<'tcx> {
                 }
             }
             rustc_middle::mir::TerminatorKind::Drop { place, .. } => {
-                let dropped = self.alias_graph.resolve_project(def_id, place);
+                let dropped = self.my_tcx.alias_graph.resolve_project(def_id, place);
                 unsafe {
                     if let Some(lock) = (*dropped).get_out_vertex(&EdgeLabel::Guard) {
                         let alias_locks = (*lock).get_alias_set();
