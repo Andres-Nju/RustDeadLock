@@ -16,7 +16,7 @@ use crate::{
 pub struct MyTcx<'tcx> {
     pub tcx: TyCtxt<'tcx>,
     pub call_graph: CallGraph<'tcx>,
-    pub alias_graph: AliasGraph,
+    pub alias_graph: FxHashMap<DefId, AliasGraph>,
     // the traversing order of bbs in each function
     pub control_flow_graph: FxHashMap<DefId, Vec<BasicBlock>>,
 }
@@ -27,7 +27,7 @@ impl<'tcx> MyTcx<'tcx> {
         Self {
             tcx,
             call_graph: CallGraph::new(),
-            alias_graph: AliasGraph::new(),
+            alias_graph: FxHashMap::default(),
             control_flow_graph: FxHashMap::default(),
         }
     }

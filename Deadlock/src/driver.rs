@@ -156,8 +156,15 @@ impl rustc_driver::Callbacks for MyCallBacks {
             let mut alias_anaysis_pass = AliasAnalysis::new(my_tcx);
             alias_anaysis_pass.run_analysis();
 
+            if self.options.emit_call_graph {
+                alias_anaysis_pass.my_tcx.call_graph.print_calls();
+            }
+
             if self.options.emit_alias_graph {
-                my_tcx.alias_graph.print_graph();
+                for (def_id, alias_graph) in my_tcx.alias_graph.iter() {
+                    println!("Function: {:?}", def_id);
+                    alias_graph.print_graph();
+                }
             }
 
             // lock set analysis pass

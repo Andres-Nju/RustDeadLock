@@ -36,6 +36,7 @@ mod visitor;
 pub struct LockSetAnalysis<'a, 'tcx> {
     my_tcx: &'a mut MyTcx<'tcx>,
 
+    current_func: Option<DefId>,
     // whole-program data
     // a DefId + BasicBlock's index pair determines a bb
     lock_set_facts: FxHashMap<DefId, FxHashMap<usize, LockSummary>>,
@@ -53,6 +54,7 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
     pub fn new(my_tcx: &'a mut MyTcx<'tcx>) -> Self {
         Self {
             my_tcx,
+            current_func: None,
             lock_set_facts: FxHashMap::default(),
             var_debug_info: FxHashMap::default(),
             lock_graph: LockGraph::new(),
@@ -127,21 +129,24 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
     }
 
     fn visit_body(&mut self, def_id: DefId, body: &Body<'tcx>) {
-        self.init_func(&def_id, body);
+        self.current_func = Some(def_id);
+        self.init_func(body);
         // FIXME: redundant clone
         for current_bb_index in self.my_tcx.control_flow_graph[&def_id].clone() {
             // println!("bb {:?} now under lock analysis ", current_bb_index);
-            self.visit_bb(def_id, current_bb_index.as_usize(), body);
+            self.visit_bb(current_bb_index.as_usize(), body);
         }
     }
-    fn init_func(&mut self, def_id: &DefId, body: &Body) {
-        let lock_set_facts = self.lock_set_facts.get_mut(def_id).unwrap();
-        for bb_index in self.my_tcx.control_flow_graph.get(def_id).unwrap().clone() {
+    fn init_func(&mut self, body: &Body) {
+        let def_id = self.current_func.unwrap().clone();
+        let lock_set_facts = self.lock_set_facts.get_mut(&def_id).unwrap();
+        for bb_index in self.my_tcx.control_flow_graph.get(&def_id).unwrap().clone() {
             lock_set_facts.entry(bb_index.as_usize()).or_insert(vec![]);
         }
     }
 
-    fn visit_bb(&mut self, def_id: DefId, bb_index: usize, body: &Body<'tcx>) {
+    fn visit_bb(&mut self, bb_index: usize, body: &Body<'tcx>) {
+        // let def_id = self.current_func.unwrap().clone();
         // merge the pres
         for pre in body
             .basic_blocks
@@ -150,14 +155,15 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
             .unwrap()
         {
             // refactor the lock_set_facts access
-            self.merge(pre, def_id, bb_index);
+            self.merge(pre, bb_index);
         }
         let data = &body.basic_blocks[BasicBlock::from(bb_index)];
         // process the terminator
-        self.visit_terminator(&def_id, bb_index, &data.terminator().kind, body);
+        self.visit_terminator(bb_index, &data.terminator().kind, body);
     }
 
-    pub fn merge(&mut self, pre: &BasicBlock, def_id: DefId, bb_index: usize) {
+    pub fn merge(&mut self, pre: &BasicBlock, bb_index: usize) {
+        let def_id = self.current_func.unwrap().clone();
         // merge the lock set
         let pre_lock_fact = self.lock_set_facts[&def_id][&pre.as_usize()].clone();
         self.lock_set_facts
@@ -176,26 +182,64 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
 
     fn visit_terminator(
         &mut self,
-        def_id: &DefId,
         bb_index: usize,
         terminator_kind: &TerminatorKind,
         body: &Body<'tcx>,
     ) {
+        let def_id = self.current_func.unwrap().clone();
+        let alias_graph = self
+            .my_tcx
+            .alias_graph
+            .get_mut(&self.current_func.unwrap())
+            .unwrap();
         match terminator_kind {
             rustc_middle::mir::TerminatorKind::Call {
                 func,
                 args,
                 destination,
-                target,
-                unwind,
-                call_source,
-                fn_span,
+                ..
             } => {
                 match func {
                     mir::Operand::Constant(constant) => {
                         match constant.ty().kind() {
                             rustc_type_ir::TyKind::FnDef(fn_id, _) => {
                                 // _* = func(args) -> [return: bb*, unwind: bb*] @ Call: FnDid: *
+                                if fn_id.is_local() {
+                                    // process local functions in the same crate
+                                    let callee_size =
+                                        self.my_tcx.control_flow_graph.get(fn_id).unwrap().len();
+                                    let callee_summary_clone = self
+                                        .lock_set_facts
+                                        .get_mut(&def_id)
+                                        .unwrap()
+                                        .get(&callee_size)
+                                        .unwrap()
+                                        .clone();
+
+                                    // for each o of all the acquired but not released locks in caller
+                                    // and for each o' in the callee's summary,
+                                    let current_set_facts = self.lock_set_facts
+                                    .get_mut(&def_id)
+                                    .unwrap()
+                                    .get_mut(&bb_index)
+                                    .unwrap();
+                                    for lock_set_fact in current_set_facts.iter_mut(){
+                                        for lock_fact in lock_set_fact.iter(){
+                                            let caller_lock = lock_fact.
+                                            for 
+                                        }
+                                    }
+                                    // 1. if o' is acquired in the callee, add lock graph edge o -> o'
+
+                                    // 2. if o' is released in the callee, and o' is alias to o
+                                    // this means o' is released in the callee, so change the state from 0 to 1
+
+                                    // 3. clone the lock summary from callee
+                                    
+                                        .extend(callee_summary_clone);
+                                    return;
+                                }
+                                // now process special funcs
                                 let def_path = self.my_tcx.tcx.def_path(fn_id.clone());
                                 let def_path_str = self.my_tcx.tcx.def_path_str(fn_id);
                                 if let DefPathData::ValueNs(name) =
@@ -208,10 +252,8 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                                                 // must be move _*
                                                 mir::Operand::Constant(_) => todo!(),
                                                 mir::Operand::Copy(p) | mir::Operand::Move(p) => {
-                                                    let guard = self
-                                                        .my_tcx
-                                                        .alias_graph
-                                                        .resolve_project(def_id, destination);
+                                                    let guard = alias_graph
+                                                        .resolve_project(&def_id, destination);
                                                     let mut new_lock_set_fact =
                                                         FxHashSet::default();
                                                     unsafe {
@@ -227,7 +269,7 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                                                             );
                                                             for lock_set_fact in self
                                                                 .lock_set_facts
-                                                                .get_mut(def_id)
+                                                                .get_mut(&def_id)
                                                                 .unwrap()
                                                                 .entry(bb_index)
                                                                 .or_insert(vec![])
@@ -269,7 +311,7 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                                                         }
                                                     }
                                                     self.lock_set_facts
-                                                        .get_mut(def_id)
+                                                        .get_mut(&def_id)
                                                         .unwrap()
                                                         .get_mut(&bb_index)
                                                         .unwrap()
@@ -290,7 +332,7 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                 }
             }
             rustc_middle::mir::TerminatorKind::Drop { place, .. } => {
-                let dropped = self.my_tcx.alias_graph.resolve_project(def_id, place);
+                let dropped = alias_graph.resolve_project(&def_id, place);
                 unsafe {
                     if let Some(lock) = (*dropped).get_out_vertex(&EdgeLabel::Guard) {
                         let alias_locks = (*lock).get_alias_set();
@@ -302,7 +344,7 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                             let mut new_lock_set_fact = FxHashSet::default();
                             for lock_fact_set in self
                                 .lock_set_facts
-                                .get_mut(def_id)
+                                .get_mut(&def_id)
                                 .unwrap()
                                 .get_mut(&bb_index)
                                 .unwrap()
@@ -346,7 +388,7 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                                 new_lock_set_fact.insert(new_fact);
                             }
                             self.lock_set_facts
-                                .get_mut(def_id)
+                                .get_mut(&def_id)
                                 .unwrap()
                                 .get_mut(&bb_index)
                                 .unwrap()

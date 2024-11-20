@@ -2,6 +2,7 @@ use call_graph_node::Call;
 use collector::FnCollector;
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use rustc_hir::def::DefKind;
 use rustc_hir::{def_id::DefId, intravisit::Visitor, BodyId, HirId, ItemKind};
 use rustc_middle::mir::{Location, Operand, TerminatorKind};
 use rustc_middle::ty::{self, TyCtxt};
@@ -52,7 +53,13 @@ impl<'a, 'tcx> CallGraphPass<'a, 'tcx> {
     }
 
     pub fn collect(&mut self) -> &FxHashSet<DefId> {
-        self.my_tcx.tcx.hir().visit_all_item_likes_in_crate(self);
+        // self.my_tcx.tcx.hir().visit_all_item_likes_in_crate(self);
+        for mir in self.my_tcx.tcx.mir_keys(()) {
+            let def_id = mir.to_def_id();
+            if self.my_tcx.tcx.is_mir_available(def_id) {
+                self.my_tcx.call_graph.fn_set.insert(def_id);
+            }
+        }
         &self.my_tcx.call_graph.fn_set
     }
 
@@ -134,25 +141,6 @@ impl<'a, 'tcx> CallGraphPass<'a, 'tcx> {
         stack.push(node);
     }
 
-    pub fn add_call(&mut self, caller: DefId, call: Call<'tcx>) {
-        let calls = self
-            .my_tcx
-            .call_graph
-            .calls_map
-            .entry(caller)
-            .or_insert(FxHashSet::default());
-        calls.insert(call);
-    }
-
-    pub fn print_calls(&self) {
-        for a in self.my_tcx.call_graph.calls_map.iter() {
-            println!("{:?} -> \n", a.0);
-            for call in a.1 {
-                println!("  {:?}", call);
-            }
-        }
-    }
-
     pub fn print_call_edges(&self) {
         println!("Show all edges of the call graph:");
         for (caller, callee) in &self.my_tcx.call_graph.edges {
@@ -166,7 +154,7 @@ impl<'a, 'tcx> CallGraphPass<'a, 'tcx> {
     pub fn print_topo(&self) {
         println!("Show the topo sort of the call graph:");
         for f in &self.my_tcx.call_graph.topo {
-            println!("{} ", self.my_tcx.tcx.def_path_str(f));
+            println!("  {} ", self.my_tcx.tcx.def_path_str(f));
         }
         println!();
     }
@@ -180,6 +168,21 @@ impl<'tcx> CallGraph<'tcx> {
             topo: vec![],
             calls_map: FxHashMap::default(),
             fn_set: FxHashSet::default(),
+        }
+    }
+
+    pub fn add_call(&mut self, caller: DefId, call: Call<'tcx>) {
+        let calls = self.calls_map.entry(caller).or_insert(FxHashSet::default());
+        calls.insert(call);
+    }
+
+    pub fn print_calls(&self) {
+        println!("Calls map:");
+        for a in self.calls_map.iter() {
+            println!("{:?} -> \n", a.0);
+            for call in a.1 {
+                println!("  {:?}", call);
+            }
         }
     }
 }

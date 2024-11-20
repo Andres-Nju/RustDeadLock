@@ -18,10 +18,8 @@ impl Miner {
                 // 第二次锁定 gas_pricer，造成死锁
                 self.gas_pricer.lock().unwrap().recalibrate();
                 Ok(true)
-            },
-            GasPricer::Calibrated(_) => {
-                Err("Gas pricer already calibrated")
-            },
+            }
+            GasPricer::Calibrated(_) => Err("Gas pricer already calibrated"),
         }
     }
 }
@@ -32,7 +30,7 @@ impl GasPricer {
         match *self {
             GasPricer::Fixed(ref mut val) => {
                 *val += 10; // 模拟重新校准
-            },
+            }
             GasPricer::Calibrated(_) => {}
         }
     }

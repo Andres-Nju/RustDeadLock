@@ -26,7 +26,8 @@ pub mod graph;
 pub mod node;
 
 pub struct AliasAnalysis<'a, 'tcx> {
-    my_tcx: &'a mut MyTcx<'tcx>,
+    pub my_tcx: &'a mut MyTcx<'tcx>,
+    current_func: Option<DefId>,
     num_iteration: i32,
 }
 
@@ -34,6 +35,7 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
     pub fn new(my_tcx: &'a mut MyTcx<'tcx>) -> Self {
         Self {
             my_tcx,
+            current_func: None,
             num_iteration: 1,
         }
     }
@@ -55,7 +57,8 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
         tracing::info!("Finish alias analysis");
     }
 
-    fn init_func(&mut self, def_id: &DefId, body: &Body) {
+    fn init_func(&mut self, body: &Body) {
+        let def_id = self.current_func.unwrap().clone();
         // compute the confrol flow graph in a reverse post-order
         let mut reverse_post_order = vec![];
         for bb in body.basic_blocks.reverse_postorder() {
@@ -69,9 +72,16 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
             .or_insert(reverse_post_order);
         set_local_id(body.local_decls.len());
         // create node for each parameter
+        // first, init the alias graph
+        self.my_tcx
+            .alias_graph
+            .entry(def_id.clone())
+            .or_insert(AliasGraph::new());
         for index in 0..body.arg_count {
             self.my_tcx
                 .alias_graph
+                .entry(def_id.clone())
+                .or_insert(AliasGraph::new())
                 .get_or_insert_node(GraphNodeId::new(def_id.clone(), Some(index + 1)));
         }
     }
@@ -82,10 +92,10 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
             if self.my_tcx.tcx.is_mir_available(def_id) {
                 if def_id.is_local() && self.my_tcx.control_flow_graph.get(&def_id) == None {
                     // each function is analyzed only once
-                    // println!(
-                    //     "Now analyze function {:?}'s alias information",
-                    //     self.my_tcx.tcx.def_path_str(def_id)
-                    // );
+                    println!(
+                        "Now analyze function {:?}'s alias information",
+                        self.my_tcx.tcx.def_path_str(def_id)
+                    );
                     let body = self.my_tcx.tcx.optimized_mir(def_id);
                     // only analyze functions defined in current crate
                     // FIXME: closure?
@@ -96,28 +106,28 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
     }
 
     fn visit_body(&mut self, def_id: DefId, body: &Body<'tcx>) {
-        self.init_func(&def_id, body);
+        self.current_func = Some(def_id);
+        self.init_func(body);
         // FIXME: redundant clone
         for current_bb_index in self.my_tcx.control_flow_graph[&def_id].clone() {
             // println!("bb {:?} now under alias analysis ", current_bb_index);
-            self.visit_bb(def_id, current_bb_index.as_usize(), body);
+            self.visit_bb(current_bb_index.as_usize(), body);
         }
     }
 
-    fn visit_bb(&mut self, def_id: DefId, bb_index: usize, body: &Body<'tcx>) {
+    fn visit_bb(&mut self, bb_index: usize, body: &Body<'tcx>) {
         let data = &body.basic_blocks[BasicBlock::from(bb_index)];
 
         // traverse the bb's statements
-        data.statements.iter().for_each(|statement| {
-            self.visit_statement(def_id, bb_index, statement, body.local_decls())
-        });
+        data.statements
+            .iter()
+            .for_each(|statement| self.visit_statement(bb_index, statement, body.local_decls()));
         // process the terminator
-        self.visit_terminator(&def_id, bb_index, &data.terminator().kind, body);
+        self.visit_terminator(bb_index, &data.terminator().kind, body);
     }
 
     fn visit_statement(
         &mut self,
-        def_id: DefId,
         bb_index: usize,
         statement: &Statement<'tcx>,
         decls: &LocalDecls,
@@ -125,7 +135,7 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
         match &statement.kind {
             rustc_middle::mir::StatementKind::Assign(ref assign) => {
                 //if is_lock(&decls[Local::from_usize(left)].ty) {
-                self.visit_assign(&def_id, bb_index, &assign.0, &assign.1);
+                self.visit_assign(bb_index, &assign.0, &assign.1);
                 //}
             }
             rustc_middle::mir::StatementKind::FakeRead(_) => (),
@@ -143,48 +153,75 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
         }
     }
 
-    fn visit_assign(&mut self, def_id: &DefId, bb_index: usize, lhs: &Place, rhs: &Rvalue<'tcx>) {
+    fn visit_assign(&mut self, bb_index: usize, lhs: &Place, rhs: &Rvalue<'tcx>) {
         // resolve rhs
 
         match rhs {
             Rvalue::Use(op) => match op {
                 mir::Operand::Copy(p) | mir::Operand::Move(p) => {
-                    self.visit_copy_or_move(def_id, lhs, p);
+                    self.visit_copy_or_move(lhs, p);
                 }
                 mir::Operand::Constant(_) => {
-                    self.visit_constant(def_id, lhs);
+                    self.visit_constant(lhs);
                 }
             },
             Rvalue::AddressOf(_, p) | Rvalue::Ref(_, _, p) => {
-                self.visit_address_of_or_ref(def_id, lhs, p);
+                self.visit_address_of_or_ref(lhs, p);
             }
             Rvalue::Repeat(_, _) => todo!(),
             Rvalue::ThreadLocalRef(_) => todo!(),
             Rvalue::Len(_) => todo!(),
             Rvalue::Cast(_, _, _) => (),
-            Rvalue::Discriminant(p) => self.visit_copy_or_move(def_id, lhs, p),
+            Rvalue::Discriminant(p) => self.visit_copy_or_move(lhs, p),
             Rvalue::Aggregate(_, _) => (), // TODO: 直接创建struct时
             Rvalue::ShallowInitBox(_, _) => todo!(),
             Rvalue::CopyForDeref(p) => {
-                self.visit_copy_or_move(def_id, lhs, p);
+                self.visit_copy_or_move(lhs, p);
             }
             _ => (),
         }
     }
 
-    fn visit_constant(&mut self, def_id: &DefId, lhs: &Place) {
-        self.my_tcx.alias_graph.resolve_project(def_id, lhs);
+    fn visit_constant(&mut self, lhs: &Place) {
+        let def_id = self.current_func.unwrap().clone();
+        self.my_tcx
+            .alias_graph
+            .get_mut(&def_id)
+            .unwrap()
+            .resolve_project(&def_id, lhs);
     }
 
-    fn visit_copy_or_move(&mut self, def_id: &DefId, lhs: &Place, rhs: &Place) {
-        let node_x = self.my_tcx.alias_graph.resolve_project(def_id, lhs);
-        let node_y = self.my_tcx.alias_graph.resolve_project(def_id, rhs);
+    fn visit_copy_or_move(&mut self, lhs: &Place, rhs: &Place) {
+        let def_id = self.current_func.unwrap().clone();
+        let node_x = self
+            .my_tcx
+            .alias_graph
+            .get_mut(&def_id)
+            .unwrap()
+            .resolve_project(&def_id, lhs);
+        let node_y = self
+            .my_tcx
+            .alias_graph
+            .get_mut(&def_id)
+            .unwrap()
+            .resolve_project(&def_id, rhs);
         self.make_alias(node_x, node_y);
     }
 
-    fn visit_address_of_or_ref(&mut self, def_id: &DefId, lhs: &Place, rhs: &Place) {
-        let node_x = self.my_tcx.alias_graph.resolve_project(def_id, lhs);
-        let node_y = self.my_tcx.alias_graph.resolve_project(def_id, rhs);
+    fn visit_address_of_or_ref(&mut self, lhs: &Place, rhs: &Place) {
+        let def_id = self.current_func.unwrap().clone();
+        let node_x = self
+            .my_tcx
+            .alias_graph
+            .get_mut(&def_id)
+            .unwrap()
+            .resolve_project(&def_id, lhs);
+        let node_y = self
+            .my_tcx
+            .alias_graph
+            .get_mut(&def_id)
+            .unwrap()
+            .resolve_project(&def_id, rhs);
         unsafe {
             (*node_x).add_target(node_y, EdgeLabel::Deref);
         }
@@ -192,7 +229,6 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
 
     fn visit_terminator(
         &mut self,
-        def_id: &DefId,
         bb_index: usize,
         terminator_kind: &TerminatorKind<'tcx>,
         body: &Body<'tcx>,
@@ -208,6 +244,8 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                 call_source,
                 fn_span,
             } => {
+                let def_id = self.current_func.unwrap().clone();
+                let alias_graph = self.my_tcx.alias_graph.get_mut(&def_id).unwrap();
                 match func {
                     mir::Operand::Constant(constant) => {
                         match constant.ty().kind() {
@@ -227,9 +265,8 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                                 }
                                                 mir::Operand::Constant(_)
                                                 | mir::Operand::Move(_) => {
-                                                    self.my_tcx
-                                                        .alias_graph
-                                                        .resolve_project(def_id, destination);
+                                                    alias_graph
+                                                        .resolve_project(&def_id, destination);
                                                 }
                                             }
                                         } else if name.as_str() == "lock" {
@@ -239,14 +276,10 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                                 mir::Operand::Constant(_) => todo!(),
                                                 mir::Operand::Copy(p) | mir::Operand::Move(p) => {
                                                     // if the lock_ref is from the parameters, lock_ref may have no out_vertices
-                                                    let guard = self
-                                                        .my_tcx
-                                                        .alias_graph
-                                                        .resolve_project(def_id, destination);
-                                                    let lock_ref = self
-                                                        .my_tcx
-                                                        .alias_graph
-                                                        .resolve_project(def_id, p);
+                                                    let guard = alias_graph
+                                                        .resolve_project(&def_id, destination);
+                                                    let lock_ref =
+                                                        alias_graph.resolve_project(&def_id, p);
                                                     // guard = mutex::lock( lock_ref )
                                                     // lock_ref is &mutex, so need to get its deref target
                                                     unsafe {
@@ -258,9 +291,7 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                                                 EdgeLabel::from("Guard"),
                                                             );
                                                         } else {
-                                                            let lock = self
-                                                                .my_tcx
-                                                                .alias_graph
+                                                            let lock = alias_graph
                                                                 .get_or_insert_node(
                                                                     GraphNodeId::new(
                                                                         def_id.clone(),
@@ -288,14 +319,10 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                                     panic!("should not go to this branch!");
                                                 }
                                                 mir::Operand::Move(p) => {
-                                                    let smart_ptr = self
-                                                        .my_tcx
-                                                        .alias_graph
-                                                        .resolve_project(def_id, destination);
-                                                    let val = self
-                                                        .my_tcx
-                                                        .alias_graph
-                                                        .resolve_project(def_id, p);
+                                                    let smart_ptr = alias_graph
+                                                        .resolve_project(&def_id, destination);
+                                                    let val =
+                                                        alias_graph.resolve_project(&def_id, p);
                                                     unsafe {
                                                         (*smart_ptr)
                                                             .add_target(val, EdgeLabel::Deref);
@@ -308,17 +335,13 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                         match &args[0].node {
                                             // must be move _*
                                             mir::Operand::Constant(_) => {
-                                                self.visit_constant(def_id, destination)
+                                                self.visit_constant(destination)
                                             }
                                             mir::Operand::Move(p) | mir::Operand::Copy(p) => {
-                                                let unwrap = self
-                                                    .my_tcx
-                                                    .alias_graph
-                                                    .resolve_project(def_id, destination);
-                                                let unwraped = self
-                                                    .my_tcx
-                                                    .alias_graph
-                                                    .resolve_project(def_id, p);
+                                                let unwrap = alias_graph
+                                                    .resolve_project(&def_id, destination);
+                                                let unwraped =
+                                                    alias_graph.resolve_project(&def_id, p);
                                                 self.make_alias(unwraped, unwrap);
                                             }
                                         }
@@ -331,19 +354,15 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                         match &args[0].node {
                                             // must be copy _*
                                             mir::Operand::Constant(_) => {
-                                                self.visit_constant(def_id, destination)
+                                                self.visit_constant(destination)
                                             }
                                             mir::Operand::Move(p) | mir::Operand::Copy(p) => {
                                                 // clone = mutex::lock( cloned_ref )
                                                 // cloned_ref is &be_cloned, so need to get its deref target
-                                                let clone = self
-                                                    .my_tcx
-                                                    .alias_graph
-                                                    .resolve_project(def_id, destination);
-                                                let cloned_ref = self
-                                                    .my_tcx
-                                                    .alias_graph
-                                                    .resolve_project(def_id, p);
+                                                let clone = alias_graph
+                                                    .resolve_project(&def_id, destination);
+                                                let cloned_ref =
+                                                    alias_graph.resolve_project(&def_id, p);
                                                 unsafe {
                                                     // if the clone_ref is from the parameters, clone_ref may have no out_vertices
                                                     if let Some(cloned) = (*cloned_ref)
@@ -351,9 +370,7 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                                     {
                                                         self.make_alias(cloned, clone);
                                                     } else {
-                                                        let cloned = self
-                                                            .my_tcx
-                                                            .alias_graph
+                                                        let cloned = alias_graph
                                                             .get_or_insert_node(GraphNodeId::new(
                                                                 def_id.clone(),
                                                                 None,
@@ -365,7 +382,7 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                                 }
                                             }
                                         }
-                                    } else {
+                                    } else if fn_id.is_local() {
                                         let call = Call::new(
                                             (
                                                 def_id.clone(),
@@ -377,7 +394,7 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                             destination.clone(),
                                             args.iter().map(|span| span.node.clone()).collect(),
                                         );
-                                        // self.call_graph.add_call(def_id.clone(), call);
+                                        self.my_tcx.call_graph.add_call(def_id.clone(), call);
                                     }
                                 }
                             }
@@ -403,14 +420,18 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
             }
             // todo: redundant clone
             for (def_id, call_set) in self.my_tcx.call_graph.calls_map.clone().iter() {
+                self.current_func = Some(def_id.clone());
                 for call in call_set {
                     let callee = call.callee();
                     let ret = call.ret();
+                    let caller_alias_graph: *mut AliasGraph =
+                        self.my_tcx.alias_graph.get_mut(def_id).unwrap() as *mut _;
+                    let callee_alias_graph: *mut AliasGraph =
+                        self.my_tcx.alias_graph.get_mut(callee).unwrap() as *mut _;
                     // 1. add ret's constrain: ret in caller = callee()
-                    let ret_node = self.my_tcx.alias_graph.resolve_project(def_id, ret);
-                    let callee_ret = self
-                        .my_tcx
-                        .alias_graph
+                    let ret_node =
+                        (unsafe { &mut *caller_alias_graph }).resolve_project(def_id, ret);
+                    let callee_ret = (unsafe { &mut *callee_alias_graph })
                         .get_or_insert_node(GraphNodeId::new(callee.clone(), Some(0)));
                     self.make_alias(ret_node, callee_ret);
                     // 2. add args' constrain
@@ -418,18 +439,21 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                     for (index, arg) in call.args().iter().enumerate() {
                         match arg {
                             mir::Operand::Copy(p) | mir::Operand::Move(p) => {
-                                let arg = self.my_tcx.alias_graph.resolve_project(def_id, p);
-                                let param = self.my_tcx.alias_graph.get_or_insert_node(
-                                    GraphNodeId::new(callee.clone(), Some(index + 1)),
-                                );
+                                let arg = (unsafe { &mut *caller_alias_graph })
+                                    .resolve_project(def_id, p);
+                                let param =
+                                    (unsafe { &mut *callee_alias_graph }).get_or_insert_node(
+                                        GraphNodeId::new(callee.clone(), Some(index + 1)),
+                                    );
                                 self.make_alias(param, arg);
                             }
                             mir::Operand::Constant(_) => (),
                         }
                     }
+                    (unsafe { &mut *caller_alias_graph }).qirun_algorithm();
                 }
             }
-            self.my_tcx.alias_graph.qirun_algorithm();
+            // self.my_tcx.alias_graph.qirun_algorithm();
             iteration_count += 1;
         }
     }
@@ -439,6 +463,10 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
         node_x: *mut AliasGraphNode,
         node_y: *mut AliasGraphNode,
     ) -> *mut AliasGraphNode {
-        self.my_tcx.alias_graph.combine(node_x, node_y)
+        self.my_tcx
+            .alias_graph
+            .get_mut(&self.current_func.unwrap())
+            .unwrap()
+            .combine(node_x, node_y)
     }
 }

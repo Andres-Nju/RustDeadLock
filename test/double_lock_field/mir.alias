@@ -1,0 +1,455 @@
+Options { emit_mir: false, emit_call_graph: false, emit_alias_graph: true, emit_lock_graph: false, cargo_args: [] }
+[2m2024-11-19T14:00:26.942583Z[0m [32m INFO[0m [2mrustc_compat::cargo_plugin[0m[2m:[0m Start to Exec: PLUGIN_ARGS="{\"emit_mir\":false,\"emit_call_graph\":false,\"emit_alias_graph\":true,\"emit_lock_graph\":false,\"cargo_args\":[]}" RUSTC_PLUGIN_ALL_TARGETS="" RUSTC_WORKSPACE_WRAPPER="/home/zcq/.cargo/bin/deadlock" "cargo" "check" "--target-dir" "/mnt/e/GitHub/RustDeadLock/test/double_lock_field/target/plugin-nightly-2024-07-05" "-q" "--all"
+Start callgraph analysis
+Finish callgraph analysis
+2024-11-19T14:00:27.045114Z  INFO rust_deadlock::analysis::alias: Start alias analysis
+Now analyze function "GasPricer::recalibrate"'s alias information
+Now analyze function "Miner::set_minimal_gas_price"'s alias information
+Now analyze function "main"'s alias information
+2024-11-19T14:00:27.049844Z  INFO rust_deadlock::analysis::alias: Finish alias analysis
+Function: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price)
+node map:
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 2 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 21 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 21 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 21 } }
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 0 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 10 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 12 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 12 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 9 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 9 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 10 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 10 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 7 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 7 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 0 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 0 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 20 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 20 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 18 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 18 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 15 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 15 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 8 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 20 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 5 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 6 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 6 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 6 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 3 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 3 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 16 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 16 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 13 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 14 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 14 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 14 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 11 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 1 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 4 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 4 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 1 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 1 } }
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 1 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 1 }
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 5 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 18 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 7 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 7 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 14 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 14 }
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 13 }
+  Out Labels:
+    - Guard
+  In Labels:
+    - Deref
+  Successors:
+    - Label: Guard
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 }
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 12 }
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 10 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 10 }
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 0 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 0 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 0 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 15 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 15 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 18 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 18 }
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 1 }
+  Out Labels:
+    - Field(0)
+  In Labels:
+    - Deref
+  Successors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 }
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 1 }
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 }
+  Out Labels:
+  In Labels:
+    - Deref
+    - Field(0)
+    - Guard
+  Successors:
+  Predecessors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 18 }
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 7 }
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 15 }
+    - Label: Guard
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 6 }
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 14 }
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 6 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 6 }
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 5 }
+  Out Labels:
+    - Guard
+  In Labels:
+    - Deref
+  Successors:
+    - Label: Guard
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 19 }
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 4 }
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 4 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 4 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 6 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 9 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 9 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 21 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 3 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 3 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 20 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 20 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 20 }
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 8 }
+  Out Labels:
+    - Field(0)
+  In Labels:
+    - Deref
+  Successors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 21 }
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 3 }
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 21 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 21 }
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 2 }
+  Out Labels:
+  In Labels:
+    - Field(0)
+    - Deref
+  Successors:
+  Predecessors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 20 }
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 9 }
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 12 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 12 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 14 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 16 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 16 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Function: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate)
+node map:
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 7 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 7 } }
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 0 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 0 } }
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 3 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 3 } }
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 6 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 6 } }
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 2 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 6 } }
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 8 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 7 } }
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 1 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 1 } }
+  GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 4 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 4 } }
+Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 1 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 1 }
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 11 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 6 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 3 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 3 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 7 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 6 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 6 }
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 2 }
+  Out Labels:
+    - Field(0)
+  In Labels:
+    - Deref
+  Successors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 7 }
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 1 }
+
+Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 7 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 7 }
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 8 }
+  Out Labels:
+  In Labels:
+    - Field(0)
+    - Deref
+  Successors:
+  Predecessors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 6 }
+      - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 4 }
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 3 }
+
+Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 4 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 4 }
+  Out Labels:
+    - Field(0)
+  In Labels:
+  Successors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 7 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 0 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:18 ~ double_lock_field[4bec]::{impl#1}::recalibrate), index: 0 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Function: DefId(0:19 ~ double_lock_field[4bec]::main)
+node map:
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 1 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 18 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 22 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 22 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 15 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 10 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 10 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 4 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 6 } }
+  GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 0 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 6 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 18 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 18 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 12 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 12 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 11 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 11 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 6 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 6 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 5 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 1 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 20 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 20 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 19 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 19 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 14 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 14 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 7 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 } }
+  GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 2 } --> AliasGraphNode { id: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 2 } }
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 2 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 2 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 6 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 6 }
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 4 }
+    - Node ID: GraphNodeId { def_id: DefId(0:16 ~ double_lock_field[4bec]::{impl#0}::set_minimal_gas_price), index: 0 }
+  Out Labels:
+    - Field(0)
+  In Labels:
+  Successors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 10 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 10 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 }
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 7 }
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 15 }
+  Out Labels:
+  In Labels:
+    - Field(0)
+    - Deref
+  Successors:
+  Predecessors:
+    - Label: Field(0)
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 6 }
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 14 }
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 22 }
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 14 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 14 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 11 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 11 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 12 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 12 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 12 }
+  Out Labels:
+  In Labels:
+    - Deref
+  Successors:
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 11 }
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 18 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 18 }
+  Out Labels:
+  In Labels:
+  Successors:
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 22 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 22 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 24 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 19 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 19 }
+  Out Labels:
+    - Deref
+  In Labels:
+  Successors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 20 }
+  Predecessors:
+
+Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 20 }
+  Alias Set:
+    - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 20 }
+  Out Labels:
+  In Labels:
+    - Deref
+  Successors:
+  Predecessors:
+    - Label: Deref
+      - Node ID: GraphNodeId { def_id: DefId(0:19 ~ double_lock_field[4bec]::main), index: 19 }
+
+2024-11-19T14:00:27.050194Z  INFO rust_deadlock::analysis: Start alias analysis
+2024-11-19T14:00:27.050353Z  INFO rust_deadlock::analysis: Finish lock analysis
+[2m2024-11-19T14:00:27.103087Z[0m [32m INFO[0m [2mrustc_compat::cargo_plugin[0m[2m:[0m Finish to Exec PLUGIN_ARGS="{\"emit_mir\":false,\"emit_call_graph\":false,\"emit_alias_graph\":true,\"emit_lock_graph\":false,\"cargo_args\":[]}" RUSTC_PLUGIN_ALL_TARGETS="" RUSTC_WORKSPACE_WRAPPER="/home/zcq/.cargo/bin/deadlock" "cargo" "check" "--target-dir" "/mnt/e/GitHub/RustDeadLock/test/double_lock_field/target/plugin-nightly-2024-07-05" "-q" "--all"

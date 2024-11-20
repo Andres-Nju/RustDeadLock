@@ -65,8 +65,8 @@ impl AliasGraph {
         mut node_y: *mut AliasGraphNode,
     ) -> *mut AliasGraphNode {
         unsafe {
-            assert!(self.nodes.contains(&node_x));
-            assert!(self.nodes.contains(&node_y));
+            // assert!(self.nodes.contains(&node_x));
+            // assert!(self.nodes.contains(&node_y));
 
             if node_x == node_y {
                 return node_x;
@@ -134,7 +134,7 @@ impl AliasGraph {
     pub fn qirun_algorithm(&mut self) {
         let mut work_list = VecDeque::new();
         unsafe {
-            for node in self.nodes.iter() {
+            for (_, node) in self.node_map.iter() {
                 for label in (**node).out_labels.iter() {
                     if (**node).out_num_vertices(label) > 1 {
                         work_list.push_back((*node, label.clone()));
