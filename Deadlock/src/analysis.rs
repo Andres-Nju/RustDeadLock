@@ -205,38 +205,78 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                             rustc_type_ir::TyKind::FnDef(fn_id, _) => {
                                 // _* = func(args) -> [return: bb*, unwind: bb*] @ Call: FnDid: *
                                 if fn_id.is_local() {
+                                    println!("caller: {:?}, callee: {:?}", def_id, fn_id);
+                                    println!(
+                                        "callee cfg: {:?}",
+                                        self.my_tcx.control_flow_graph.get(fn_id).unwrap()
+                                    );
                                     // process local functions in the same crate
-                                    let callee_size =
-                                        self.my_tcx.control_flow_graph.get(fn_id).unwrap().len();
-                                    let callee_summary_clone = self
+                                    let callee_exit = self
+                                        .my_tcx
+                                        .control_flow_graph
+                                        .get(fn_id)
+                                        .unwrap()
+                                        .last()
+                                        .unwrap();
+                                    // todo: 不应该是cfg上的最后一个节点，应该先给CFG创建Entry和Exit节点，
+                                    // 其中Exit节点的所有前驱应该是所有的Return terminator
+                                    println!("callee exit {:?}", callee_exit);
+                                    let callee_summary_clone = if let Some(s) = self
+                                        .lock_set_facts
+                                        .get_mut(&fn_id)
+                                        .unwrap()
+                                        .get(&callee_exit.as_usize())
+                                    {
+                                        // todo: 这里似乎可以删掉一些方法，比如压根没有lock fact的，可以在框架数据结构中去掉
+                                        s.clone()
+                                    } else {
+                                        return;
+                                    };
+                                    println!("callee summary {:?}", callee_summary_clone);
+                                    // for each o of all the acquired but not released locks in caller
+                                    // and for each o' in the callee's summary,
+                                    let current_set_facts = self
                                         .lock_set_facts
                                         .get_mut(&def_id)
                                         .unwrap()
-                                        .get(&callee_size)
-                                        .unwrap()
-                                        .clone();
-
-                                    // for each o of all the acquired but not released locks in caller
-                                    // and for each o' in the callee's summary,
-                                    let current_set_facts = self.lock_set_facts
-                                    .get_mut(&def_id)
-                                    .unwrap()
-                                    .get_mut(&bb_index)
-                                    .unwrap();
-                                    for lock_set_fact in current_set_facts.iter_mut(){
-                                        for lock_fact in lock_set_fact.iter(){
-                                            let caller_lock = lock_fact.
-                                            for 
+                                        .get_mut(&bb_index)
+                                        .unwrap();
+                                    for lock_set_fact in current_set_facts.iter_mut() {
+                                        for caller_fact in lock_set_fact.clone().into_iter() {
+                                            if caller_fact.is_acquisition && !caller_fact.state {
+                                                for callee_set_fact in callee_summary_clone.iter() {
+                                                    for callee_fact in callee_set_fact.iter() {
+                                                        // 1. if o' is acquired in the callee, add lock graph edge o -> o'
+                                                        if callee_fact.is_acquisition {
+                                                            self.lock_graph.add_edge(
+                                                                caller_fact.lock.clone(),
+                                                                callee_fact.lock.clone(),
+                                                            );
+                                                        }
+                                                        // 2. if o' is released in the callee, and o' is alias to o
+                                                        // todo: 这里是直接判断o == o'，是否应该判断alias？
+                                                        // 似乎不需要判断alias，因为所有alias的lock都被记录下来了
+                                                        // this means o' is released in the callee, so change the state from 0 to 1
+                                                        // todo: in Rust, this means the lock guard is moved into callee
+                                                        if !callee_fact.is_acquisition
+                                                            && callee_fact.lock == caller_fact.lock
+                                                        {
+                                                            if let Some(mut u) =
+                                                                lock_set_fact.take(&caller_fact)
+                                                            {
+                                                                u.state = true;
+                                                                lock_set_fact.insert(u);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
-                                    // 1. if o' is acquired in the callee, add lock graph edge o -> o'
-
-                                    // 2. if o' is released in the callee, and o' is alias to o
-                                    // this means o' is released in the callee, so change the state from 0 to 1
 
                                     // 3. clone the lock summary from callee
-                                    
-                                        .extend(callee_summary_clone);
+
+                                    current_set_facts.extend(callee_summary_clone);
                                     return;
                                 }
                                 // now process special funcs

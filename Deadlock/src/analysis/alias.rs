@@ -62,7 +62,9 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
         // compute the confrol flow graph in a reverse post-order
         let mut reverse_post_order = vec![];
         for bb in body.basic_blocks.reverse_postorder() {
-            if !body.basic_blocks.get(*bb).unwrap().is_cleanup {
+            if !body.basic_blocks.get(*bb).unwrap().is_cleanup
+                && !body.basic_blocks.get(*bb).unwrap().is_empty_unreachable()
+            {
                 reverse_post_order.push(bb.clone());
             }
         }
