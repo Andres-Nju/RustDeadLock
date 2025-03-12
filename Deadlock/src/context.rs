@@ -22,6 +22,7 @@ pub struct MyTcx<'tcx> {
 }
 
 unsafe impl<'tcx> Send for MyTcx<'tcx> {}
+
 impl<'tcx> MyTcx<'tcx> {
     pub fn new(tcx: TyCtxt<'tcx>) -> Self {
         Self {

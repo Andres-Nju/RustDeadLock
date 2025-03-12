@@ -205,11 +205,11 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                             rustc_type_ir::TyKind::FnDef(fn_id, _) => {
                                 // _* = func(args) -> [return: bb*, unwind: bb*] @ Call: FnDid: *
                                 if fn_id.is_local() {
-                                    println!("caller: {:?}, callee: {:?}", def_id, fn_id);
-                                    println!(
-                                        "callee cfg: {:?}",
-                                        self.my_tcx.control_flow_graph.get(fn_id).unwrap()
-                                    );
+                                    // println!("caller: {:?}, callee: {:?}", def_id, fn_id);
+                                    // println!(
+                                    //     "callee cfg: {:?}",
+                                    //     self.my_tcx.control_flow_graph.get(fn_id).unwrap()
+                                    // );
                                     // process local functions in the same crate
                                     let callee_exit = self
                                         .my_tcx
@@ -220,7 +220,7 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                                         .unwrap();
                                     // todo: 不应该是cfg上的最后一个节点，应该先给CFG创建Entry和Exit节点，
                                     // 其中Exit节点的所有前驱应该是所有的Return terminator
-                                    println!("callee exit {:?}", callee_exit);
+                                    // println!("callee exit {:?}", callee_exit);
                                     let callee_summary_clone = if let Some(s) = self
                                         .lock_set_facts
                                         .get_mut(&fn_id)
@@ -232,7 +232,7 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                                     } else {
                                         return;
                                     };
-                                    println!("callee summary {:?}", callee_summary_clone);
+                                    // println!("callee summary {:?}", callee_summary_clone);
                                     // for each o of all the acquired but not released locks in caller
                                     // and for each o' in the callee's summary,
                                     let current_set_facts = self
@@ -376,9 +376,12 @@ impl<'a, 'tcx> LockSetAnalysis<'a, 'tcx> {
                 unsafe {
                     if let Some(lock) = (*dropped).get_out_vertex(&EdgeLabel::Guard) {
                         let alias_locks = (*lock).get_alias_set();
-                        if (*alias_locks).len() == 1 {
-                            // if the variable points to more than one locks, skip it
-                            let lock_id = (**(*alias_locks).iter().next().unwrap()).id.clone();
+                        // if (*alias_locks).len() == 1 {
+                        // if the variable points to more than one locks, skip it
+                        // 这是针对Anderson-style的pta来说的，steensgaard将所有alias的ptr看作同一块region，所以直接做即可
+                        // let lock_id = (**(*alias_locks).iter().next().unwrap()).id.clone();
+                        for lock_id in (*alias_locks).iter() {
+                            let lock_id = (**lock_id).id.clone();
                             let lock = Lock::new(lock_id.def_id, lock_id.index);
                             let mut flag = false;
                             let mut new_lock_set_fact = FxHashSet::default();

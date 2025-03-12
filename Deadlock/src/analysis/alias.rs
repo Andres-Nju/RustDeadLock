@@ -348,8 +348,6 @@ impl<'a, 'tcx> AliasAnalysis<'a, 'tcx> {
                                             }
                                         }
                                     }
-                                    // else if name.as_str() == "deref"{
-                                    // }
                                     // todo: maybe problematic here
                                     else if name.as_str() == "clone" || name.as_str() == "deref" {
                                         assert_eq!(1, args.len());
